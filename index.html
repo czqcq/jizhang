@@ -747,8 +747,9 @@ function exportPDF() {
     '.total-row{font-weight:700;background:#f0f0ff}'+
     '.expense-section{margin-top:24px;border-top:2px solid #333;padding-top:16px}'+
     '.profit{text-align:center;font-size:28px;font-weight:700;margin-top:16px}'+
+    '.back-btn{display:block;width:120px;margin:24px auto;padding:10px;text-align:center;background:#007AFF;color:#fff;border:none;border-radius:8px;font-size:16px;cursor:pointer}'+
     '.footer{text-align:center;color:#aaa;font-size:12px;margin-top:24px}'+
-    '@media print{body{padding:0}}</style></head><body>'+
+    '@media print{.back-btn{display:none}}</style></head><body>'+
     '<h1>'+yr+'年'+mo+'月 营收报表</h1>'+
     '<div class="sub">报表生成时间：'+new Date().toLocaleDateString('zh-CN')+'</div>'+
     '<div class="summary">'+
@@ -760,6 +761,7 @@ function exportPDF() {
     (detailRows.length > 0 ? '<table><tr><th>日期</th><th>周</th><th>美团</th><th>抖音</th><th>支付宝</th><th>微信</th><th>现金</th><th>合计</th></tr>'+detailHtml+
     '<tr class="total-row"><td colspan="2">合计</td><td>¥'+totalMeituan.toFixed(2)+'</td><td>¥'+totalDouyin.toFixed(2)+'</td><td>¥'+totalAlipay.toFixed(2)+'</td><td>¥'+totalWechat.toFixed(2)+'</td><td>¥'+totalCash.toFixed(2)+'</td><td>¥'+totalRevenue.toFixed(2)+'</td></tr></table>' : '<p style="text-align:center;color:#999">本月暂无营收记录</p>')+
     '<div class="expense-section"><h3>月度支出明细</h3><table>'+expenseTableHeader+expenseTableHtml+'</table></div>'+
+    '<button class="back-btn" onclick="window.close()">← 返回</button>'+
     '<div class="footer">记账应用 · czqcq.github.io/jizhang</div>'+
     '</body></html>';
 
