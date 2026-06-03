@@ -420,7 +420,7 @@ function renderToday() {
       '<span class="icon">' + ch.icon + '</span>' +
       '<span class="label">' + ch.label + '</span>' +
       '<span class="prefix">¥</span>' +
-      '<input type="number" step="0.01" placeholder="0.00" value="' + (r[ch.key] || 0) + '" onchange="updateRevenue(\'' + ch.key + '\', this.value)" id="input_'+ch.key+'">' +
+      '<input type="number" step="0.01" placeholder="0.00" value="' + (r[ch.key] || 0) + '" onchange="updateRevenue(\'' + ch.key + '\', this.value)" onfocus="if(this.value==\'0\')this.value=\'\'" onblur="if(this.value===\'\')this.value=\'0\'" id="input_'+ch.key+'">' +
       '</div>';
   });
   document.getElementById('revenueCard').innerHTML = html;
@@ -533,7 +533,7 @@ function renderMonthly() {
     expHtml += '<div class="card-row" id="expRow_'+idx+'">' +
       '<input value="'+escapeHtml(item.label)+'" id="exp_label_'+idx+'" onchange="onExpenseLabelChange('+idx+')" style="width:70px;text-align:left;margin-right:8px;font-size:14px;padding:6px 8px" placeholder="名称">' +
       '<span class="prefix" style="margin-left:auto">¥</span>' +
-      '<input type="number" step="0.01" value="'+item.amount+'" id="exp_amount_'+idx+'" onchange="onExpenseChange()" style="width:90px">' +
+      '<input type="number" step="0.01" value="'+item.amount+'" id="exp_amount_'+idx+'" onchange="onExpenseChange()" onfocus="if(this.value==\'0\')this.value=\'\'" onblur="if(this.value===\'\')this.value=\'0\'" style="width:90px">' +
       (exp.items.length > 1 ? '<span onclick="removeExpenseItem('+idx+')" style="margin-left:8px;color:var(--red);font-size:20px;cursor:pointer">&times;</span>' : '') +
       '</div>';
   });
