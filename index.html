@@ -177,11 +177,6 @@ body{
   点击下方 <b>分享按钮</b> → <b>添加到主屏幕</b> 获得 App 体验
   <button onclick="this.parentElement.style.display='none'" style="background:none;border:none;color:#fff;font-size:18px;margin-left:8px;cursor:pointer">&times;</button>
 </div>
-
-<!-- 更新提示 -->
-<div id="updatePrompt" style="display:none;background:#FF9500;color:#fff;text-align:center;padding:10px;font-size:14px">
-  🔄 发现新版本，<b onclick="location.href=location.href.split('?')[0]+'?t='+Date.now()" style="text-decoration:underline;cursor:pointer">点击更新</b>
-  <button onclick="this.parentElement.style.display='none'" style="background:none;border:none;color:#fff;font-size:18px;margin-left:8px;cursor:pointer">&times;</button>
 </div>
 
 <!-- Toast -->
@@ -271,8 +266,6 @@ body{
     <span>历史</span>
   </button>
 </div>
-<div style="position:fixed;bottom:0;left:0;right:0;text-align:center;font-size:10px;color:var(--secondary);padding-bottom:calc(env(safe-area-inset-bottom,0) + 54px);pointer-events:none">version 10</div>
-<button onclick="location.href=location.href.split('?')[0]+'?t='+Date.now()" style="position:fixed;bottom:calc(env(safe-area-inset-bottom,0) + 50px);right:12px;width:36px;height:36px;border-radius:50%;border:none;background:var(--blue);color:#fff;font-size:18px;z-index:101;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,0.2)">↻</button>
 
 <script>
 // ========== 数据管理 ==========
@@ -833,16 +826,6 @@ function showToast(msg) {
 }
 
 // ========== 初始化 ==========
-const APP_VERSION = 'v10';
-
-// 版本更新检测（必须在 setItem 之前检查）
-(function checkVersion() {
-  const stored = localStorage.getItem('app_version');
-  if (stored && stored !== APP_VERSION) {
-    document.getElementById('updatePrompt').style.display = 'block';
-  }
-})();
-localStorage.setItem('app_version', APP_VERSION);
 
 loadData();
 initMonthlyVars();
