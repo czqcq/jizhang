@@ -866,6 +866,7 @@ function showToast(msg) {
 const DEEPSEEK_URL = 'https://api.deepseek.com/chat/completions';
 
 function getApiKey() {
+  // 本地文件已预设 Key，无需手动输入；线上版本需自行填写
   return localStorage.getItem('deepseek_api_key') || '';
 }
 
