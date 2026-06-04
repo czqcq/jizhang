@@ -1,0 +1,1200 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="记账">
+<link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%23007AFF'/><text x='50' y='65' text-anchor='middle' font-size='50' fill='white'>💰</text></svg>">
+<title>记账</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --accent:#2563EB;--green:#059669;--red:#DC2626;--orange:#D97706;
+  --bg:#F8FAFC;--card:#FFFFFF;--text:#0F172A;--secondary:#64748B;
+  --border:#E2E8F0;--border-light:#F1F5F9;--radius:16px;--radius-sm:12px
+}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',sans-serif;
+  background:var(--bg);color:var(--text);-webkit-font-smoothing:antialiased;
+  overscroll-behavior:none;padding-bottom:env(safe-area-inset-bottom,0);
+  line-height:1.6
+}
+
+/* ── 底部导航 ── */
+.tab-bar{
+  position:fixed;bottom:0;left:0;right:0;background:var(--card);
+  border-top:1px solid var(--border);display:flex;z-index:100;
+  padding:6px 0;padding-bottom:calc(6px + env(safe-area-inset-bottom,0))
+}
+.tab-btn{
+  flex:1;padding:4px 0;border:none;background:none;color:var(--secondary);
+  font-size:10px;font-weight:500;display:flex;flex-direction:column;
+  align-items:center;gap:3px;cursor:pointer;transition:color .2s;
+  -webkit-tap-highlight-color:transparent
+}
+.tab-btn.active{color:var(--accent)}
+.tab-btn svg{width:22px;height:22px}
+.tab-btn.active svg{opacity:1}
+
+/* ── 页面容器 ── */
+.page{display:none;padding:8px 16px 110px;max-width:480px;margin:0 auto}
+.page.active{display:block}
+
+/* ── 头部导航 ── */
+.nav-header{
+  text-align:center;padding:24px 0 8px;font-size:20px;font-weight:700;
+  letter-spacing:-.2px;color:var(--text)
+}
+.date-nav{
+  display:flex;align-items:center;justify-content:center;gap:8px;
+  margin-bottom:20px
+}
+.date-nav button{
+  width:36px;height:36px;display:flex;align-items:center;justify-content:center;
+  background:var(--card);border:1px solid var(--border);border-radius:50%;
+  font-size:14px;color:var(--secondary);cursor:pointer;transition:all .15s
+}
+.date-nav button:active{background:var(--border-light)}
+.date-nav .date-text{
+  font-size:16px;font-weight:600;min-width:150px;text-align:center;
+  color:var(--text);cursor:pointer;padding:4px 8px;
+  border-radius:8px;transition:background .15s
+}
+.date-nav .date-text:active{background:var(--border-light)}
+
+/* ── 卡片 ── */
+.card{
+  background:var(--card);border-radius:var(--radius);margin-bottom:12px;
+  overflow:hidden;border:1px solid var(--border)
+}
+.card-header{
+  padding:14px 16px 0;font-size:12px;color:var(--secondary);
+  font-weight:600;letter-spacing:.3px;text-transform:uppercase
+}
+.card-row{
+  display:flex;align-items:center;padding:12px 16px;
+  border-bottom:1px solid var(--border-light)
+}
+.card-row:last-child{border-bottom:none}
+.card-row .icon{font-size:22px;margin-right:10px;opacity:.85}
+.card-row .label{flex:1;font-size:15px;font-weight:500;color:var(--text)}
+.card-row input{
+  width:100px;text-align:right;border:1.5px solid var(--border);
+  border-radius:10px;padding:10px 12px;font-size:15px;outline:none;
+  background:var(--bg);transition:border-color .2s,background .2s;
+  font-weight:500;color:var(--text)
+}
+.card-row input:focus{border-color:var(--accent);background:var(--card)}
+.card-row .prefix{color:var(--secondary);font-size:15px;margin-right:2px;font-weight:500}
+
+/* ── 合计行 ── */
+.total-row{
+  display:flex;justify-content:flex-end;padding:10px 16px;
+  font-size:13px;color:var(--accent);font-weight:600
+}
+.total-row.expense{color:var(--orange)}
+
+/* ── 利润卡片 ── */
+.profit-row{
+  display:flex;align-items:center;padding:16px 20px;
+  background:var(--card);border-radius:var(--radius);margin-bottom:16px;
+  border:1px solid var(--border)
+}
+.profit-row .label{flex:1;font-size:16px;font-weight:600;color:var(--text)}
+.profit-row .value{font-size:24px;font-weight:700;letter-spacing:-.5px}
+
+/* ── 按钮 ── */
+.btn{
+  display:block;width:100%;padding:14px;font-size:15px;font-weight:600;
+  border:none;border-radius:var(--radius-sm);cursor:pointer;color:#fff;
+  background:var(--accent);margin-bottom:12px;transition:opacity .15s;
+  -webkit-tap-highlight-color:transparent
+}
+.btn:active{opacity:.85}
+.btn-secondary{
+  background:var(--card);color:var(--accent);border:1.5px solid var(--border);
+  font-weight:500
+}
+.btn-secondary:active{background:var(--border-light)}
+
+/* ── 月度汇总行 ── */
+.summary-row{
+  display:flex;align-items:center;padding:12px 16px;
+  border-bottom:1px solid var(--border-light)
+}
+.summary-row:last-child{border-bottom:none}
+.summary-row .icon{font-size:20px;margin-right:10px;opacity:.85}
+.summary-row .label{flex:1;font-size:15px;font-weight:500}
+.summary-row .value{font-size:15px;font-weight:600;color:var(--text)}
+
+/* ── 历史记录 ── */
+.section-header{
+  padding:8px 0;font-size:12px;color:var(--secondary);font-weight:600;
+  letter-spacing:.3px
+}
+.history-item{
+  background:var(--card);border-radius:var(--radius-sm);padding:14px 16px;
+  margin-bottom:8px;border:1px solid var(--border)
+}
+.history-item .date{font-size:15px;font-weight:600;margin-bottom:2px}
+.history-item .detail{font-size:12px;color:var(--secondary);line-height:1.5}
+.history-item .right{text-align:right;font-size:17px;font-weight:700;color:var(--accent)}
+
+.month-summary{
+  background:var(--card);border-radius:var(--radius-sm);padding:10px 16px;
+  margin-bottom:12px;font-size:12px;display:flex;gap:14px;
+  justify-content:center;border:1px solid var(--border);flex-wrap:wrap
+}
+.month-summary span{white-space:nowrap;font-weight:500}
+
+.year-header{
+  font-size:17px;font-weight:700;padding:20px 0 10px;
+  color:var(--text);letter-spacing:-.2px
+}
+
+/* ── Toast ── */
+.toast{
+  position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);
+  background:var(--text);color:#fff;padding:12px 28px;
+  border-radius:12px;font-size:14px;z-index:999;opacity:0;
+  transition:opacity .2s;pointer-events:none;font-weight:500
+}
+.toast.show{opacity:1}
+
+/* ── 空状态 ── */
+.empty-state{
+  text-align:center;padding:60px 20px;color:var(--secondary)
+}
+.empty-state .icon{font-size:48px;margin-bottom:12px}
+.empty-state .text{font-size:15px;line-height:1.6}
+
+/* ── 月份选择器 ── */
+.month-picker{
+  display:flex;align-items:center;justify-content:center;gap:6px;margin-bottom:20px
+}
+.month-picker select{
+  font-size:15px;padding:10px 14px;border:1.5px solid var(--border);
+  border-radius:10px;background:var(--card);outline:none;font-weight:500;
+  color:var(--text);appearance:none;-webkit-appearance:none;
+  cursor:pointer
+}
+.month-picker button{
+  width:32px;height:32px;display:flex;align-items:center;justify-content:center;
+  background:var(--card);border:1px solid var(--border);border-radius:50%;
+  font-size:12px;color:var(--secondary);cursor:pointer;transition:all .15s
+}
+.month-picker button:active{background:var(--border-light)}
+
+/* ── 日期选择器弹出层 ── */
+.picker-overlay{
+  position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(15,23,42,.4);
+  z-index:200;display:none;justify-content:center;align-items:center;
+  backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px)
+}
+.picker-overlay.show{display:flex}
+.picker-panel{
+  background:var(--card);border-radius:20px;width:90%;max-width:360px;
+  max-height:70vh;overflow-y:auto;padding:20px;border:1px solid var(--border)
+}
+.picker-panel h3{text-align:center;margin-bottom:14px;font-size:17px;font-weight:700}
+.picker-item{
+  padding:13px 16px;text-align:center;border-bottom:1px solid var(--border-light);
+  cursor:pointer;font-size:15px;border-radius:10px;transition:all .15s
+}
+.picker-item:active{background:var(--border-light)}
+.picker-item.selected{background:var(--accent);color:#fff;font-weight:600}
+.picker-close{
+  display:block;margin:14px auto 0;padding:10px 28px;border:1.5px solid var(--border);
+  background:var(--card);border-radius:10px;font-size:15px;cursor:pointer;
+  font-weight:500;color:var(--secondary);transition:all .15s
+}
+.picker-close:active{background:var(--border-light)}
+
+/* ── AI 聊天 ── */
+.ai-chat-area{max-height:50vh;overflow-y:auto;scroll-behavior:smooth;padding:4px 0}
+.ai-bubble{
+  max-width:82%;padding:12px 16px;border-radius:18px;margin-bottom:8px;
+  font-size:14px;line-height:1.65;word-break:break-word
+}
+.ai-bubble.user{
+  background:var(--accent);color:#fff;margin-left:auto;
+  border-bottom-right-radius:6px
+}
+.ai-bubble.assistant{
+  background:var(--border-light);color:var(--text);margin-right:auto;
+  border-bottom-left-radius:6px
+}
+.ai-bubble .role-label{font-size:10px;opacity:.6;margin-bottom:3px;font-weight:600;letter-spacing:.3px}
+
+/* ── AI 输入栏 ── */
+#aiUserInput{
+  flex:1;border:1.5px solid var(--border)!important;border-radius:var(--radius-sm)!important;
+  padding:12px 14px!important;font-size:15px!important;background:var(--card)!important;
+  transition:border-color .2s
+}
+#aiUserInput:focus{border-color:var(--accent)!important}
+
+/* ── 安装提示 ── */
+#installPrompt{
+  background:var(--accent)!important;color:#fff!important
+}
+</style>
+</head>
+<body>
+
+<!-- 顶部提示 - 添加到主屏幕 -->
+<div id="installPrompt" style="display:none;background:#007AFF;color:#fff;text-align:center;padding:10px;font-size:14px">
+  点击下方 <b>分享按钮</b> → <b>添加到主屏幕</b> 获得 App 体验
+  <button onclick="this.parentElement.style.display='none'" style="background:none;border:none;color:#fff;font-size:18px;margin-left:8px;cursor:pointer">&times;</button>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<!-- 日期选择器弹出层 -->
+<div class="picker-overlay" id="datePickerOverlay">
+  <div class="picker-panel">
+    <h3 id="datePickerTitle">选择日期</h3>
+    <div id="datePickerList"></div>
+    <button class="picker-close" onclick="closeDatePicker()">取消</button>
+  </div>
+</div>
+
+<!-- 页面 1: 今日 -->
+<div class="page active" id="page-today">
+  <div class="nav-header">今日记账</div>
+  <div class="date-nav">
+    <button onclick="changeDate(-1)">◀</button>
+    <span class="date-text" id="todayDateText" onclick="openDatePicker()"></span>
+    <button onclick="changeDate(1)" id="nextDateBtn">▶</button>
+  </div>
+
+  <div class="card">
+    <div class="card-header">营收板块</div>
+  </div>
+  <div class="card" id="revenueCard"></div>
+  <div class="total-row" id="revenueTotal"></div>
+
+  <button class="btn" onclick="saveToday()">💾  保存今日营收</button>
+</div>
+
+<!-- 页面 2: 月度 -->
+<div class="page" id="page-monthly">
+  <div class="nav-header">月度汇总</div>
+  <div class="month-picker">
+    <button onclick="changeMonth(-1)">◀</button>
+    <select id="monthYearSelect" onchange="onMonthChange()">
+      <option value="2025">2025年</option>
+    </select>
+    <select id="monthSelect" onchange="renderMonthly()">
+      <option value="1">1月</option>
+    </select>
+    <button onclick="changeMonth(1)">▶</button>
+  </div>
+
+  <div class="card">
+    <div class="card-header">营收汇总</div>
+  </div>
+  <div class="card" id="monthlyRevenueCard"></div>
+  <div class="total-row" id="monthlyRevenueTotal"></div>
+
+  <div class="card">
+    <div class="card-header">月度支出</div>
+  </div>
+  <div class="card" id="monthlyExpenseCard"></div>
+  <div class="total-row expense" id="monthlyExpenseTotal"></div>
+  <button class="btn" onclick="saveMonthlyExpense()">💾  保存支出</button>
+  <button class="btn btn-secondary" onclick="exportPDF()">📄  导出本月 PDF 报表</button>
+
+  <div class="profit-row" id="monthlyProfit"></div>
+</div>
+
+<!-- 页面 3: 历史 -->
+<div class="page" id="page-history">
+  <div class="nav-header">历史记录</div>
+  <div id="historyContent"></div>
+  <div style="display:flex;gap:12px;margin-top:16px">
+    <button class="btn btn-secondary" onclick="exportBackup()" style="flex:1">📦  导出备份</button>
+    <button class="btn btn-secondary" onclick="document.getElementById('importFile').click()" style="flex:1">📥  恢复备份</button>
+  </div>
+  <input type="file" id="importFile" accept=".json" style="display:none" onchange="importBackup(this)">
+</div>
+
+<!-- 页面 4: AI 分析 -->
+<div class="page" id="page-ai">
+  <div class="nav-header">AI 智能分析</div>
+
+  <div id="aiChatArea" class="ai-chat-area" style="margin-bottom:12px"></div>
+
+  <div id="aiLoading" style="display:none;text-align:center;padding:12px;color:var(--accent);font-size:14px">
+    ⏳ AI 思考中...
+  </div>
+
+  <div style="display:flex;gap:8px;margin-bottom:12px">
+    <button class="btn btn-secondary" onclick="runAIAnalysis()" style="flex:1;margin-bottom:0;font-size:14px;padding:10px">📊 分析本月</button>
+    <button class="btn btn-secondary" onclick="clearAIChat()" style="flex:1;margin-bottom:0;font-size:14px;padding:10px">🗑️ 清空对话</button>
+  </div>
+
+  <!-- 输入栏 -->
+  <div style="display:flex;gap:8px;margin-bottom:16px">
+    <input type="text" id="aiUserInput" placeholder="输入问题..." onkeydown="if(event.key==='Enter')sendAIMessage()">
+    <button onclick="sendAIMessage()" style="padding:12px 16px;background:var(--accent);color:#fff;border:none;border-radius:var(--radius-sm);font-size:15px;cursor:pointer;font-weight:600">发送</button>
+  </div>
+
+  <div style="text-align:center;color:var(--secondary);font-size:11px;padding:0 0 12px">
+    <a href="https://platform.deepseek.com/api_keys" target="_blank" style="color:var(--accent)">API Key</a>
+    &nbsp;|&nbsp;模型：<select id="modelSelect" onchange="saveModel()" style="font-size:11px;border:1px solid var(--border);border-radius:6px;padding:2px 4px;background:var(--card)">
+      <option value="deepseek-chat">标准</option>
+      <option value="deepseek-reasoner">深度</option>
+    </select>
+  </div>
+</div>
+
+<!-- Tab Bar -->
+<div class="tab-bar">
+  <button class="tab-btn active" onclick="switchPage('today')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+    <span>今日</span>
+  </button>
+  <button class="tab-btn" onclick="switchPage('monthly')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+    <span>月度</span>
+  </button>
+  <button class="tab-btn" onclick="switchPage('history')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+    <span>历史</span>
+  </button>
+  <button class="tab-btn" onclick="switchPage('ai')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a4 4 0 0 1 4 4v2a4 4 0 0 1-8 0V6a4 4 0 0 1 4-4z"/><path d="M8 14v-2a4 4 0 0 1 8 0v2"/><circle cx="12" cy="18" r="4"/><line x1="10" y1="18" x2="14" y2="18"/></svg>
+    <span>AI</span>
+  </button>
+</div>
+
+<script>
+// ========== 数据管理 ==========
+const STORAGE_KEY_RECORDS = 'accounting_records_v1';
+const STORAGE_KEY_EXPENSES = 'accounting_expenses_v1';
+
+let records = [];
+let monthlyExpenses = [];
+
+function loadData() {
+  try {
+    records = JSON.parse(localStorage.getItem(STORAGE_KEY_RECORDS) || '[]');
+    monthlyExpenses = JSON.parse(localStorage.getItem(STORAGE_KEY_EXPENSES) || '[]');
+    // 迁移旧格式（rent/utilities/consumables）到新格式（items数组）
+    let migrated = false;
+    monthlyExpenses = monthlyExpenses.map(e => {
+      if (e.rent !== undefined) {
+        migrated = true;
+        return { year: e.year, month: e.month, items: [
+          { id: 'rent', label: '房租', amount: e.rent || 0 },
+          { id: 'utilities', label: '水电', amount: e.utilities || 0 },
+          { id: 'consumables', label: '耗材', amount: e.consumables || 0 }
+        ]};
+      }
+      return e;
+    });
+    if (migrated) saveMonthlyExpensesData();
+  } catch(e) {
+    records = [];
+    monthlyExpenses = [];
+  }
+}
+
+function saveRecords() {
+  localStorage.setItem(STORAGE_KEY_RECORDS, JSON.stringify(records));
+}
+
+function saveMonthlyExpensesData() {
+  localStorage.setItem(STORAGE_KEY_EXPENSES, JSON.stringify(monthlyExpenses));
+}
+
+function dateKey(d) {
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+
+function getRecord(date) {
+  const key = dateKey(date);
+  let r = records.find(r => r.key === key);
+  if (!r) {
+    r = { key, meituan: 0, douyin: 0, alipay: 0, wechat: 0, cash: 0 };
+    records.push(r);
+  }
+  return r;
+}
+
+function getRecordsForMonth(year, month) {
+  const prefix = year + '-' + String(month).padStart(2,'0') + '-';
+  return records.filter(r => r.key.startsWith(prefix));
+}
+
+function getDefaultExpenseItems() {
+  return [
+    { id: 'rent', label: '房租', amount: 0 },
+    { id: 'utilities', label: '水电', amount: 0 },
+    { id: 'consumables', label: '耗材', amount: 0 }
+  ];
+}
+
+function getExpense(year, month) {
+  let e = monthlyExpenses.find(e => e.year === year && e.month === month);
+  if (!e) {
+    e = { year, month, items: getDefaultExpenseItems() };
+    monthlyExpenses.push(e);
+  }
+  return e;
+}
+
+// ========== 当前日期管理 ==========
+let currentDate = new Date();
+currentDate.setHours(0,0,0,0);
+
+function changeDate(delta) {
+  currentDate.setDate(currentDate.getDate() + delta);
+  const today = new Date(); today.setHours(0,0,0,0);
+  document.getElementById('nextDateBtn').style.visibility = currentDate >= today ? 'hidden' : 'visible';
+  renderToday();
+}
+
+function openDatePicker() {
+  const overlay = document.getElementById('datePickerOverlay');
+  const title = document.getElementById('datePickerTitle');
+  const list = document.getElementById('datePickerList');
+  title.textContent = '选择日期';
+
+  // 列出最近 60 天的日期
+  const today = new Date(); today.setHours(0,0,0,0);
+  let html = '';
+  for (let i = 60; i >= 0; i--) {
+    const d = new Date(today);
+    d.setDate(d.getDate() - i);
+    const cls = dateKey(d) === dateKey(currentDate) ? ' selected' : '';
+    const label = (d.getMonth()+1) + '月' + d.getDate() + '日 ' + ['日','一','二','三','四','五','六'][d.getDay()];
+    html += '<div class="picker-item' + cls + '" onclick="pickDate(\'' + dateKey(d) + '\')">' + label + '</div>';
+  }
+  list.innerHTML = html;
+  overlay.classList.add('show');
+}
+
+function pickDate(key) {
+  const [y,m,d] = key.split('-').map(Number);
+  currentDate = new Date(y, m-1, d);
+  closeDatePicker();
+  renderToday();
+}
+
+function closeDatePicker() {
+  document.getElementById('datePickerOverlay').classList.remove('show');
+}
+
+// ========== 页面切换 ==========
+function switchPage(page) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById('page-' + page).classList.add('active');
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+
+  const tabs = {today: 0, monthly: 1, history: 2, ai: 3};
+  document.querySelectorAll('.tab-btn')[tabs[page]].classList.add('active');
+
+  if (page === 'today') renderToday();
+  if (page === 'monthly') renderMonthly();
+  if (page === 'history') renderHistory();
+  if (page === 'ai') renderAIPage();
+}
+
+// ========== 今日营收 ==========
+function renderToday() {
+  const dateText = document.getElementById('todayDateText');
+  const wd = ['日','一','二','三','四','五','六'];
+  dateText.textContent = (currentDate.getMonth()+1) + '月' + currentDate.getDate() + '日 星期' + wd[currentDate.getDay()];
+
+  const r = getRecord(currentDate);
+
+  const channels = [
+    { key: 'meituan', icon: '🟠', label: '美团营收' },
+    { key: 'douyin',  icon: '🎵', label: '抖音营收' },
+    { key: 'alipay',  icon: '🔵', label: '支付宝营收' },
+    { key: 'wechat',  icon: '🟢', label: '微信营收' },
+    { key: 'cash',    icon: '💵', label: '现金营收' }
+  ];
+
+  let html = '';
+  channels.forEach(ch => {
+    html += '<div class="card-row">' +
+      '<span class="icon">' + ch.icon + '</span>' +
+      '<span class="label">' + ch.label + '</span>' +
+      '<span class="prefix">¥</span>' +
+      '<input type="number" step="0.01" placeholder="0.00" value="' + (r[ch.key] || 0) + '" onchange="updateRevenue(\'' + ch.key + '\', this.value)" onfocus="if(this.value==\'0\')this.value=\'\'" onblur="if(this.value===\'\')this.value=\'0\'" id="input_'+ch.key+'">' +
+      '</div>';
+  });
+  document.getElementById('revenueCard').innerHTML = html;
+
+  updateRevenueTotal();
+}
+
+function updateRevenue(key, val) {
+  const r = getRecord(currentDate);
+  r[key] = parseFloat(val) || 0;
+  updateRevenueTotal();
+}
+
+function updateRevenueTotal() {
+  const r = getRecord(currentDate);
+  const total = (r.meituan||0) + (r.douyin||0) + (r.alipay||0) + (r.wechat||0) + (r.cash||0);
+  document.getElementById('revenueTotal').innerHTML = '今日营收合计：¥' + total.toFixed(2);
+}
+
+function saveToday() {
+  const r = getRecord(currentDate);
+  // 从 inputs 读取最新值
+  ['meituan','douyin','alipay','wechat','cash'].forEach(k => {
+    const el = document.getElementById('input_'+k);
+    if (el) r[k] = parseFloat(el.value) || 0;
+  });
+  // 确保记录被保存
+  const key = dateKey(currentDate);
+  const idx = records.findIndex(r => r.key === key);
+  if (idx < 0) records.push(r); else records[idx] = r;
+  saveRecords();
+  showToast('保存成功 ✓');
+}
+
+// ========== 月度汇总 ==========
+let monthlyYear, monthlyMonth;
+function initMonthlyVars() {
+  const now = new Date();
+  monthlyYear = now.getFullYear();
+  monthlyMonth = now.getMonth() + 1;
+}
+
+function initMonthPicker() {
+  const ySelect = document.getElementById('monthYearSelect');
+  const mSelect = document.getElementById('monthSelect');
+
+  ySelect.innerHTML = '';
+  for (let y = 2024; y <= 2030; y++) {
+    ySelect.innerHTML += '<option value="' + y + '">' + y + '年</option>';
+  }
+  ySelect.value = monthlyYear;
+
+  mSelect.innerHTML = '';
+  for (let m = 1; m <= 12; m++) {
+    mSelect.innerHTML += '<option value="' + m + '">' + m + '月</option>';
+  }
+  mSelect.value = monthlyMonth;
+}
+
+function onMonthChange() {
+  monthlyYear = parseInt(document.getElementById('monthYearSelect').value);
+  renderMonthly();
+}
+
+function changeMonth(delta) {
+  monthlyMonth += delta;
+  if (monthlyMonth > 12) { monthlyMonth = 1; monthlyYear++; }
+  if (monthlyMonth < 1) { monthlyMonth = 12; monthlyYear--; }
+  document.getElementById('monthYearSelect').value = monthlyYear;
+  document.getElementById('monthSelect').value = monthlyMonth;
+  renderMonthly();
+}
+
+function renderMonthly() {
+  monthlyYear = parseInt(document.getElementById('monthYearSelect').value);
+  monthlyMonth = parseInt(document.getElementById('monthSelect').value);
+
+  const monthRecords = getRecordsForMonth(monthlyYear, monthlyMonth);
+  const exp = getExpense(monthlyYear, monthlyMonth);
+
+  // 营收汇总
+  let totalMeituan=0, totalDouyin=0, totalAlipay=0, totalWechat=0, totalCash=0;
+  monthRecords.forEach(r => {
+    totalMeituan += r.meituan||0;
+    totalDouyin  += r.douyin||0;
+    totalAlipay  += r.alipay||0;
+    totalWechat  += r.wechat||0;
+    totalCash    += r.cash||0;
+  });
+  const totalRevenue = totalMeituan + totalDouyin + totalAlipay + totalWechat + totalCash;
+
+  const revenueChannels = [
+    { icon:'🟠', label:'美团营收', val:totalMeituan },
+    { icon:'🎵', label:'抖音营收', val:totalDouyin },
+    { icon:'🔵', label:'支付宝营收', val:totalAlipay },
+    { icon:'🟢', label:'微信营收', val:totalWechat },
+    { icon:'💵', label:'现金营收', val:totalCash }
+  ];
+
+  let revHtml = '';
+  revenueChannels.forEach(ch => {
+    revHtml += '<div class="summary-row"><span class="icon">'+ch.icon+'</span><span class="label">'+ch.label+'</span><span class="value">¥'+ch.val.toFixed(2)+'</span></div>';
+  });
+  document.getElementById('monthlyRevenueCard').innerHTML = revHtml;
+  document.getElementById('monthlyRevenueTotal').innerHTML = '营收合计：¥' + totalRevenue.toFixed(2);
+
+  // 支出编辑
+  let expHtml = '';
+  exp.items.forEach((item, idx) => {
+    expHtml += '<div class="card-row" id="expRow_'+idx+'">' +
+      '<input value="'+escapeHtml(item.label)+'" id="exp_label_'+idx+'" onchange="onExpenseLabelChange('+idx+')" style="width:70px;text-align:left;margin-right:8px;font-size:14px;padding:6px 8px" placeholder="名称">' +
+      '<span class="prefix" style="margin-left:auto">¥</span>' +
+      '<input type="number" step="0.01" value="'+item.amount+'" id="exp_amount_'+idx+'" onchange="onExpenseChange()" onfocus="if(this.value==\'0\')this.value=\'\'" onblur="if(this.value===\'\')this.value=\'0\'" style="width:90px">' +
+      (exp.items.length > 1 ? '<span onclick="removeExpenseItem('+idx+')" style="margin-left:8px;color:var(--red);font-size:20px;cursor:pointer">&times;</span>' : '') +
+      '</div>';
+  });
+  expHtml += '<div class="card-row" style="justify-content:center;padding:12px">' +
+    '<button onclick="addExpenseItem()" style="background:none;border:none;color:var(--accent);font-size:15px;cursor:pointer;padding:4px 0">+ 添加支出项</button>' +
+    '</div>';
+  document.getElementById('monthlyExpenseCard').innerHTML = expHtml;
+  updateExpenseTotal();
+
+  // 纯利润
+  const totalExp = currentMonthTotalExpense(exp);
+  const netProfit = totalRevenue - totalExp;
+  document.getElementById('monthlyProfit').innerHTML =
+    '<span class="label">纯利润</span>' +
+    '<span class="value" style="color:' + (netProfit >= 0 ? 'var(--green)' : 'var(--red)') + '">¥' + netProfit.toFixed(2) + '</span>';
+}
+
+function currentMonthTotalExpense(exp) {
+  if (!exp) exp = getExpense(monthlyYear, monthlyMonth);
+  return exp.items.reduce((sum, it) => sum + (parseFloat(it.amount)||0), 0);
+}
+
+function readExpenseInputs() {
+  const exp = getExpense(monthlyYear, monthlyMonth);
+  exp.items.forEach((item, idx) => {
+    const labelEl = document.getElementById('exp_label_'+idx);
+    const amountEl = document.getElementById('exp_amount_'+idx);
+    if (labelEl) item.label = labelEl.value || '未命名';
+    if (amountEl) item.amount = parseFloat(amountEl.value) || 0;
+  });
+}
+
+function addExpenseItem() {
+  const exp = getExpense(monthlyYear, monthlyMonth);
+  readExpenseInputs();
+  exp.items.push({ id: 'custom_'+Date.now(), label: '', amount: 0 });
+  saveMonthlyExpensesData();
+  renderMonthly();
+}
+
+function removeExpenseItem(idx) {
+  const exp = getExpense(monthlyYear, monthlyMonth);
+  if (exp.items.length <= 1) {
+    showToast('至少保留一项支出');
+    return;
+  }
+  exp.items.splice(idx, 1);
+  saveMonthlyExpensesData();
+  renderMonthly();
+}
+
+function onExpenseLabelChange(idx) {
+  const exp = getExpense(monthlyYear, monthlyMonth);
+  const el = document.getElementById('exp_label_'+idx);
+  if (el && exp.items[idx]) exp.items[idx].label = el.value;
+  saveMonthlyExpensesData();
+}
+
+function escapeHtml(str) {
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function onExpenseChange() {
+  readExpenseInputs();
+  saveMonthlyExpensesData();
+  updateExpenseTotal();
+  // 同步更新利润
+  const monthRecords = getRecordsForMonth(monthlyYear, monthlyMonth);
+  let totalRevenue = 0;
+  monthRecords.forEach(r => {
+    totalRevenue += (r.meituan||0)+(r.douyin||0)+(r.alipay||0)+(r.wechat||0)+(r.cash||0);
+  });
+  const totalExp = currentMonthTotalExpense();
+  const netProfit = totalRevenue - totalExp;
+  document.getElementById('monthlyProfit').innerHTML =
+    '<span class="label">纯利润</span>' +
+    '<span class="value" style="color:' + (netProfit >= 0 ? 'var(--green)' : 'var(--red)') + '">¥' + netProfit.toFixed(2) + '</span>';
+}
+
+function updateExpenseTotal() {
+  const totalExp = currentMonthTotalExpense();
+  document.getElementById('monthlyExpenseTotal').innerHTML = '支出合计：¥' + totalExp.toFixed(2);
+}
+
+function saveMonthlyExpense() {
+  readExpenseInputs();
+  saveMonthlyExpensesData();
+  renderMonthly();
+  showToast('支出保存成功 ✓');
+}
+
+// ========== 历史记录 ==========
+function renderHistory() {
+  const container = document.getElementById('historyContent');
+
+  if (records.length === 0 || records.every(r => {
+    const t = (r.meituan||0)+(r.douyin||0)+(r.alipay||0)+(r.wechat||0)+(r.cash||0);
+    return t === 0;
+  })) {
+    container.innerHTML = '<div class="empty-state"><div class="icon">📋</div><div class="text">暂无记录<br>在「今日」页签中添加营收</div></div>';
+    return;
+  }
+
+  // 按年月分组
+  const groups = {};
+  records.forEach(r => {
+    if (!r.key) return;
+    const [y,m] = r.key.split('-');
+    const ym = y + '年' + parseInt(m) + '月';
+    if (!groups[ym]) groups[ym] = [];
+    groups[ym].push(r);
+  });
+
+  // 排序：最新在前
+  const sortedKeys = Object.keys(groups).sort((a,b) => {
+    const [ya,ma] = [a.slice(0,4), parseInt(a.match(/(\d+)月/)[1])];
+    const [yb,mb] = [b.slice(0,4), parseInt(b.match(/(\d+)月/)[1])];
+    if (ya !== yb) return yb - ya;
+    return mb - ma;
+  });
+
+  let html = '';
+  sortedKeys.forEach(ym => {
+    const groupRecords = groups[ym].sort((a,b) => b.key.localeCompare(a.key));
+    // 计算本月合计
+    let monthRevenue = 0;
+    groupRecords.forEach(r => {
+      monthRevenue += (r.meituan||0)+(r.douyin||0)+(r.alipay||0)+(r.wechat||0)+(r.cash||0);
+    });
+    const [y,m] = ym.split('年');
+    const month = parseInt(m);
+    const exp = getExpense(parseInt(y), month);
+    const monthExp = exp.items.reduce((sum, it) => sum + (it.amount||0), 0);
+    const monthProfit = monthRevenue - monthExp;
+
+    html += '<div class="year-header">' + ym + '</div>';
+    html += '<div class="month-summary">' +
+      '<span style="color:var(--accent)">营收：¥'+monthRevenue.toFixed(2)+'</span>' +
+      '<span style="color:var(--orange)">支出：¥'+monthExp.toFixed(2)+'</span>' +
+      '<span style="color:'+(monthProfit>=0?'var(--green)':'var(--red)')+'">利润：¥'+monthProfit.toFixed(2)+'</span>' +
+      '</div>';
+
+    groupRecords.forEach(r => {
+      const total = (r.meituan||0)+(r.douyin||0)+(r.alipay||0)+(r.wechat||0)+(r.cash||0);
+      if (total === 0) return;
+      const parts = r.key.split('-');
+      const dateStr = parseInt(parts[1]) + '月' + parseInt(parts[2]) + '日';
+      const wd = ['日','一','二','三','四','五','六'][new Date(r.key).getDay()];
+      html += '<div class="history-item" style="display:flex;justify-content:space-between;align-items:center">' +
+        '<div><div class="date">'+dateStr+' 星期'+wd+'</div>' +
+        '<div class="detail">美团¥'+((r.meituan||0)).toFixed(2)+' 抖音¥'+((r.douyin||0)).toFixed(2)+' 支付宝¥'+((r.alipay||0)).toFixed(2)+' 微信¥'+((r.wechat||0)).toFixed(2)+' 现金¥'+((r.cash||0)).toFixed(2)+'</div></div>' +
+        '<div class="right">¥'+total.toFixed(2)+'</div>' +
+        '</div>';
+    });
+  });
+
+  container.innerHTML = html;
+}
+
+// ========== PDF 报表导出 ==========
+function exportPDF() {
+  const yr = monthlyYear, mo = monthlyMonth;
+  const monthRecords = getRecordsForMonth(yr, mo);
+  const exp = getExpense(yr, mo);
+
+  let totalMeituan=0, totalDouyin=0, totalAlipay=0, totalWechat=0, totalCash=0;
+  const detailRows = [];
+  monthRecords.forEach(r => {
+    const t = (r.meituan||0)+(r.douyin||0)+(r.alipay||0)+(r.wechat||0)+(r.cash||0);
+    if (t === 0) return;
+    totalMeituan += r.meituan||0;
+    totalDouyin += r.douyin||0;
+    totalAlipay += r.alipay||0;
+    totalWechat += r.wechat||0;
+    totalCash += r.cash||0;
+    const parts = r.key.split('-');
+    const wd = ['日','一','二','三','四','五','六'][new Date(r.key).getDay()];
+    detailRows.push({date: parts[1]+'/'+parts[2], wd: wd, meituan: r.meituan||0, douyin: r.douyin||0, alipay: r.alipay||0, wechat: r.wechat||0, cash: r.cash||0, total: t});
+  });
+
+  const totalRevenue = totalMeituan + totalDouyin + totalAlipay + totalWechat + totalCash;
+  const totalExp = (exp.items || []).reduce((sum, it) => sum + (it.amount||0), 0);
+  const netProfit = totalRevenue - totalExp;
+
+  let detailHtml = '';
+  detailRows.forEach(r => {
+    detailHtml += '<tr><td>'+r.date+'</td><td>'+r.wd+'</td><td>¥'+r.meituan.toFixed(2)+'</td><td>¥'+r.douyin.toFixed(2)+'</td><td>¥'+r.alipay.toFixed(2)+'</td><td>¥'+r.wechat.toFixed(2)+'</td><td>¥'+r.cash.toFixed(2)+'</td><td style="font-weight:700">¥'+r.total.toFixed(2)+'</td></tr>';
+  });
+
+  // 支出表格
+  let expenseTableHtml = '<tr>';
+  let expenseTableHeader = '<tr>';
+  (exp.items || []).forEach(it => {
+    expenseTableHeader += '<th>'+escapeHtml(it.label||'未命名')+'</th>';
+    expenseTableHtml += '<td>¥'+(it.amount||0).toFixed(2)+'</td>';
+  });
+  expenseTableHeader += '<th>合计</th>';
+  expenseTableHtml += '<td>¥'+totalExp.toFixed(2)+'</td></tr>';
+
+  const html = '<!DOCTYPE html><html lang="zh-CN"><head><meta charset="UTF-8"><title>'+yr+'年'+mo+'月营收报表</title><style>'+
+    'body{font-family:-apple-system,sans-serif;padding:20px;max-width:800px;margin:0 auto;color:#333}'+
+    'h1{text-align:center;font-size:22px;margin-bottom:4px}'+
+    '.sub{text-align:center;color:#888;margin-bottom:20px}'+
+    '.summary{display:flex;justify-content:center;gap:24px;margin-bottom:24px;flex-wrap:wrap}'+
+    '.sum-item{background:#f5f5f5;padding:12px 20px;border-radius:8px;text-align:center}'+
+    '.sum-item .val{font-size:24px;font-weight:700}'+
+    'table{width:100%;border-collapse:collapse;margin-bottom:24px;font-size:14px}'+
+    'th,td{border:1px solid #ddd;padding:8px;text-align:right}'+
+    'th{background:#f9f9f9;font-weight:600}'+
+    'td:first-child,td:nth-child(2){text-align:center}'+
+    '.total-row{font-weight:700;background:#f0f0ff}'+
+    '.expense-section{margin-top:24px;border-top:2px solid #333;padding-top:16px}'+
+    '.profit{text-align:center;font-size:28px;font-weight:700;margin-top:16px}'+
+    '.back-btn{display:block;width:120px;margin:24px auto;padding:10px;text-align:center;background:#007AFF;color:#fff;border:none;border-radius:8px;font-size:16px;cursor:pointer}'+
+    '.footer{text-align:center;color:#aaa;font-size:12px;margin-top:24px}'+
+    '@media print{.back-btn{display:none}}</style></head><body>'+
+    '<h1>'+yr+'年'+mo+'月 营收报表</h1>'+
+    '<div class="sub">报表生成时间：'+new Date().toLocaleDateString('zh-CN')+'</div>'+
+    '<div class="summary">'+
+    '<div class="sum-item"><div style="font-size:12px;color:#888">营收合计</div><div class="val" style="color:#007AFF">¥'+totalRevenue.toFixed(2)+'</div></div>'+
+    '<div class="sum-item"><div style="font-size:12px;color:#888">支出合计</div><div class="val" style="color:#FF9500">¥'+totalExp.toFixed(2)+'</div></div>'+
+    '<div class="sum-item"><div style="font-size:12px;color:#888">纯利润</div><div class="val" style="color:'+(netProfit>=0?'#34C759':'#FF3B30')+'">¥'+netProfit.toFixed(2)+'</div></div>'+
+    '</div>'+
+    '<h3>每日营收明细</h3>'+
+    (detailRows.length > 0 ? '<table><tr><th>日期</th><th>周</th><th>美团</th><th>抖音</th><th>支付宝</th><th>微信</th><th>现金</th><th>合计</th></tr>'+detailHtml+
+    '<tr class="total-row"><td colspan="2">合计</td><td>¥'+totalMeituan.toFixed(2)+'</td><td>¥'+totalDouyin.toFixed(2)+'</td><td>¥'+totalAlipay.toFixed(2)+'</td><td>¥'+totalWechat.toFixed(2)+'</td><td>¥'+totalCash.toFixed(2)+'</td><td>¥'+totalRevenue.toFixed(2)+'</td></tr></table>' : '<p style="text-align:center;color:#999">本月暂无营收记录</p>')+
+    '<div class="expense-section"><h3>月度支出明细</h3><table>'+expenseTableHeader+expenseTableHtml+'</table></div>'+
+    '<button class="back-btn" onclick="window.close()">← 返回</button>'+
+    '<div class="footer">记账应用 · czqcq.github.io/jizhang</div>'+
+    '</body></html>';
+
+  const w = window.open('', '_blank');
+  w.document.write(html);
+  w.document.close();
+  setTimeout(() => w.print(), 500);
+}
+
+// ========== 数据备份与恢复 ==========
+function exportBackup() {
+  const data = {
+    records: localStorage.getItem('accounting_records_v1') || '[]',
+    expenses: localStorage.getItem('accounting_expenses_v1') || '[]',
+    exportedAt: new Date().toISOString()
+  };
+  const blob = new Blob([JSON.stringify(data, null, 2)], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = '记账备份_' + new Date().toLocaleDateString('zh-CN').replace(/\//g,'') + '.json';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  showToast('备份已导出 ✓');
+}
+
+function importBackup(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const data = JSON.parse(e.target.result);
+      if (!data.records || !data.expenses) {
+        showToast('文件格式不正确');
+        return;
+      }
+      if (!confirm('确定要恢复备份吗？当前数据将被覆盖。\n备份时间：' + (data.exportedAt ? new Date(data.exportedAt).toLocaleString('zh-CN') : '未知'))) return;
+      localStorage.setItem('accounting_records_v1', data.records);
+      localStorage.setItem('accounting_expenses_v1', data.expenses);
+      loadData();
+      renderToday();
+      renderHistory();
+      showToast('数据恢复成功 ✓');
+    } catch(err) {
+      showToast('文件解析失败');
+    }
+  };
+  reader.readAsText(file);
+  input.value = '';
+}
+
+// ========== Toast ==========
+function showToast(msg) {
+  const toast = document.getElementById('toast');
+  toast.textContent = msg;
+  toast.classList.add('show');
+  setTimeout(() => toast.classList.remove('show'), 1500);
+}
+
+// ========== AI 分析 (DeepSeek) ==========
+const DEEPSEEK_URL = 'https://api.deepseek.com/chat/completions';
+let aiConversation = []; // 对话历史 [{role, content}, ...]
+let aiSystemContext = ''; // 当前月数据上下文
+
+function getApiKey() {
+  // 本地文件预设 Key，线上版本请用 URL 参数注入
+  return localStorage.getItem('deepseek_api_key') || '';
+}
+
+function getModel() {
+  return localStorage.getItem('deepseek_model') || 'deepseek-chat';
+}
+
+function saveModel() {
+  localStorage.setItem('deepseek_model', document.getElementById('modelSelect').value);
+}
+
+function renderAIPage() {
+  document.getElementById('modelSelect').value = getModel();
+  renderAIChat();
+}
+
+// 构建包含当前月数据的系统提示
+function buildSystemContext() {
+  const now = new Date();
+  const yr = now.getFullYear();
+  const mo = now.getMonth() + 1;
+  const monthRecords = getRecordsForMonth(yr, mo);
+  const exp = getExpense(yr, mo);
+
+  let totalMeituan=0, totalDouyin=0, totalAlipay=0, totalWechat=0, totalCash=0;
+  monthRecords.forEach(r => {
+    totalMeituan+=r.meituan||0; totalDouyin+=r.douyin||0;
+    totalAlipay+=r.alipay||0; totalWechat+=r.wechat||0; totalCash+=r.cash||0;
+  });
+  const totalRevenue = totalMeituan+totalDouyin+totalAlipay+totalWechat+totalCash;
+  const totalExp = exp.items.reduce((s,it)=>s+(it.amount||0),0);
+  const netProfit = totalRevenue - totalExp;
+
+  let prevMo=mo-1, prevYr=yr;
+  if(prevMo===0){prevMo=12;prevYr--;}
+  const prevRecords = getRecordsForMonth(prevYr, prevMo);
+  let prevRevenue = 0;
+  prevRecords.forEach(r=>{prevRevenue+=(r.meituan||0)+(r.douyin||0)+(r.alipay||0)+(r.wechat||0)+(r.cash||0);});
+
+  let expenseDetail = exp.items.map(it=>'  - '+it.label+'：¥'+((it.amount||0)).toFixed(2)).join('\n');
+  return '当前'+yr+'年'+mo+'月经营数据：\n'+
+    '营收：美团¥'+totalMeituan.toFixed(2)+' 抖音¥'+totalDouyin.toFixed(2)+
+    ' 支付宝¥'+totalAlipay.toFixed(2)+' 微信¥'+totalWechat.toFixed(2)+' 现金¥'+totalCash.toFixed(2)+
+    '（合计¥'+totalRevenue.toFixed(2)+'）\n'+
+    '支出：\n'+expenseDetail+'\n支出合计¥'+totalExp.toFixed(2)+'\n'+
+    '纯利润¥'+netProfit.toFixed(2)+' 利润率'+(totalRevenue>0?(netProfit/totalRevenue*100).toFixed(1):'0')+'%\n'+
+    '上月营收¥'+prevRevenue.toFixed(2)+' 环比'+(prevRevenue>0?((totalRevenue-prevRevenue)/prevRevenue*100).toFixed(1):'N/A')+'%';
+}
+
+function initAIChat() {
+  aiSystemContext = buildSystemContext();
+  aiConversation = [
+    { role: 'system', content: '你是经营分析助手，请用简洁的中文回答。用户经营数据如下：\n\n' + aiSystemContext + '\n\n请基于以上数据回答用户问题，给出实用建议。' }
+  ];
+}
+
+async function sendAIMessage() {
+  const input = document.getElementById('aiUserInput');
+  const msg = input.value.trim();
+  if (!msg) return;
+  input.value = '';
+  input.blur();
+
+  if (aiConversation.length === 0) initAIChat();
+
+  // 添加用户消息
+  aiConversation.push({ role: 'user', content: msg });
+  renderAIChat();
+
+  // 检查 API Key（没有预设Key时需要手动输入）
+  let apiKey = getApiKey();
+  if (!apiKey) {
+    apiKey = prompt('请输入 DeepSeek API Key（sk-...）：');
+    if (!apiKey) {
+      aiConversation.push({ role: 'assistant', content: '请先设置 API Key 才能使用 AI 功能。' });
+      renderAIChat();
+      return;
+    }
+    localStorage.setItem('deepseek_api_key', apiKey);
+  }
+
+  document.getElementById('aiLoading').style.display = 'block';
+
+  try {
+    const model = getModel();
+    const res = await fetch(DEEPSEEK_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + apiKey
+      },
+      body: JSON.stringify({
+        model: model,
+        messages: aiConversation,
+        temperature: 0.7,
+        max_tokens: 800
+      })
+    });
+
+    document.getElementById('aiLoading').style.display = 'none';
+
+    if (!res.ok) {
+      const err = await res.json();
+      aiConversation.push({ role: 'assistant', content: 'API 错误：' + (err.error?.message || res.status) });
+    } else {
+      const data = await res.json();
+      aiConversation.push({ role: 'assistant', content: data.choices[0].message.content });
+    }
+  } catch(e) {
+    document.getElementById('aiLoading').style.display = 'none';
+    aiConversation.push({ role: 'assistant', content: '请求失败，请检查网络连接。' });
+  }
+  renderAIChat();
+}
+
+// 一键分析按钮（复用对话形式）
+async function runAIAnalysis() {
+  if (aiConversation.length === 0) initAIChat();
+  else {
+    // 更新系统上下文
+    aiSystemContext = buildSystemContext();
+    aiConversation[0].content = '你是经营分析助手，请用简洁的中文回答。用户经营数据如下：\n\n' + aiSystemContext + '\n\n请基于以上数据回答用户问题，给出实用建议。';
+  }
+  aiConversation.push({ role: 'user', content: '请全面分析本月的经营数据，包括：1) 营收结构和各渠道表现 2) 成本控制情况 3) 与上月的环比变化 4) 具体的改进建议。用简洁的中文回答。' });
+  renderAIChat();
+
+  let apiKey = getApiKey();
+  if (!apiKey) {
+    apiKey = prompt('请输入 DeepSeek API Key：');
+    if (!apiKey) return;
+    localStorage.setItem('deepseek_api_key', apiKey);
+  }
+
+  document.getElementById('aiLoading').style.display = 'block';
+
+  try {
+    const res = await fetch(DEEPSEEK_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + apiKey
+      },
+      body: JSON.stringify({
+        model: getModel(),
+        messages: aiConversation,
+        temperature: 0.7,
+        max_tokens: 800
+      })
+    });
+
+    document.getElementById('aiLoading').style.display = 'none';
+
+    if (!res.ok) {
+      const err = await res.json();
+      aiConversation.push({ role: 'assistant', content: 'API 错误：' + (err.error?.message || res.status) });
+    } else {
+      const data = await res.json();
+      aiConversation.push({ role: 'assistant', content: data.choices[0].message.content });
+    }
+  } catch(e) {
+    document.getElementById('aiLoading').style.display = 'none';
+    aiConversation.push({ role: 'assistant', content: '请求失败，请检查网络连接。' });
+  }
+  renderAIChat();
+}
+
+function renderAIChat() {
+  const area = document.getElementById('aiChatArea');
+  if (!area) return;
+
+  let html = '';
+  // 跳过 system 消息，从第一条 user/assistant 开始显示
+  for (let i = 1; i < aiConversation.length; i++) {
+    const msg = aiConversation[i];
+    const role = msg.role === 'user' ? 'user' : 'assistant';
+    html += '<div class="ai-bubble ' + role + '">' +
+      '<div class="role-label">' + (role === 'user' ? '你' : 'AI') + '</div>' +
+      msg.content.replace(/\n/g,'<br>') +
+      '</div>';
+  }
+
+  if (html === '') {
+    html = '<div style="text-align:center;color:var(--secondary);padding:40px 20px;font-size:14px">'+
+      '👋 你好！我是你的经营分析助手<br><br>'+
+      '可以问我：</div>'+
+      '<div class="ai-bubble assistant" style="margin-left:0;margin-right:auto;width:fit-content;max-width:90%">'+
+      '💡 哪个渠道营收最高？<br>💡 这个月比上个月赚得多吗？<br>💡 怎么降低成本？<br>💡 利润增长有什么建议？'+
+      '</div>';
+    area.innerHTML = html;
+  } else {
+    area.innerHTML = html;
+    scrollAIChatToBottom(area);
+  }
+}
+
+function scrollAIChatToBottom(area) {
+  if (!area) area = document.getElementById('aiChatArea');
+  if (!area) return;
+  // iOS 键盘收起需要延迟滚动
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      area.scrollTop = area.scrollHeight;
+      // 兜底方案
+      const lastBubble = area.lastElementChild;
+      if (lastBubble) {
+        setTimeout(() => lastBubble.scrollIntoView({ block: 'end', behavior: 'smooth' }), 100);
+      }
+    });
+  });
+}
+
+function clearAIChat() {
+  aiConversation = [];
+  document.getElementById('aiChatArea').innerHTML = '';
+  renderAIChat();
+}
+
+// URL key 参数注入
+(function injectApiKey() {
+  const params = new URLSearchParams(window.location.search);
+  const key = params.get('key');
+  if (key) {
+    localStorage.setItem('deepseek_api_key', key);
+    window.location.replace(window.location.pathname);
+  }
+})();
+
+// ========== 初始化 ==========
+
+loadData();
+initMonthlyVars();
+initMonthPicker();
+renderToday();
+switchPage('today');
+
+// ========== PWA 安装提示 (iOS) ==========
+const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+const isStandalone = window.navigator.standalone;
+if (isIOS && !isStandalone) {
+  document.getElementById('installPrompt').style.display = 'block';
+}
+
+// ========== Service Worker (缓存离线可用) ==========
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('data:application/javascript,' + encodeURIComponent(`
+self.addEventListener('install', e => e.waitUntil(
+  caches.open('v1').then(cache => cache.addAll(['/']))
+));
+self.addEventListener('fetch', e => {
+  e.respondWith(
+    caches.match(e.request).then(r => r || fetch(e.request))
+  );
+});
+    `)).catch(() => {});
+  });
+}
+</script>
+</body>
+</html>
