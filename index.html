@@ -1226,6 +1226,8 @@ async function sha256(message) {
 }
 
 function showLockUI(title, sub, btnText, fields, showSkip) {
+  const el = document.getElementById('lockScreen');
+  if (!el) return; // 旧缓存版本没有锁屏元素，跳过
   document.getElementById('lockTitle').textContent = title;
   document.getElementById('lockSub').textContent = sub;
   document.getElementById('lockBtn').textContent = btnText;
@@ -1237,11 +1239,12 @@ function showLockUI(title, sub, btnText, fields, showSkip) {
   document.getElementById('lockError').textContent = '';
   document.getElementById('lockInput1').placeholder = fields === 2 && lockMode === 'change' ? '输入旧密码' : '输入密码';
   document.getElementById('lockInput2').placeholder = lockMode === 'change' ? '输入新密码' : '确认密码';
-  document.getElementById('lockScreen').style.display = 'flex';
+  el.style.display = 'flex';
   setTimeout(() => document.getElementById('lockInput1').focus(), 200);
 }
 
 function initLockScreen() {
+  if (!document.getElementById('lockScreen')) return; // 旧缓存版本
   const hash = localStorage.getItem(LOCK_HASH_KEY);
   if (!hash) {
     lockMode = 'create';
@@ -1253,6 +1256,7 @@ function initLockScreen() {
 }
 
 async function handleLockSubmit() {
+  if (!document.getElementById('lockScreen')) return;
   const el1 = document.getElementById('lockInput1');
   const el2 = document.getElementById('lockInput2');
   const errEl = document.getElementById('lockError');
@@ -1377,9 +1381,14 @@ if (isIOS && !isStandalone) {
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('data:application/javascript,' + encodeURIComponent(`
-self.addEventListener('install', e => e.waitUntil(
-  caches.open('v1').then(cache => cache.addAll(['/']))
-));
+self.addEventListener('install', e => {
+  self.skipWaiting();
+  e.waitUntil(caches.open('v2').then(cache => cache.addAll(['/'])));
+});
+self.addEventListener('activate', e => {
+  e.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(k => k !== 'v2').map(k => caches.delete(k)))));
+  return self.clients.claim();
+});
 self.addEventListener('fetch', e => {
   e.respondWith(
     caches.match(e.request).then(r => r || fetch(e.request))
