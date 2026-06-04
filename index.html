@@ -240,9 +240,49 @@ body{
 #installPrompt{
   background:var(--accent)!important;color:#fff!important
 }
+
+/* ── 密码锁屏 ── */
+.lock-screen{
+  position:fixed;top:0;left:0;right:0;bottom:0;background:var(--bg);
+  z-index:9999;display:flex;flex-direction:column;align-items:center;
+  justify-content:center;padding:32px
+}
+.lock-screen .lock-icon{font-size:56px;margin-bottom:20px}
+.lock-screen h2{font-size:20px;font-weight:700;margin-bottom:6px;color:var(--text)}
+.lock-screen .lock-sub{font-size:13px;color:var(--secondary);margin-bottom:28px;text-align:center}
+.lock-screen .lock-input{
+  width:100%;max-width:280px;padding:14px 16px;border:1.5px solid var(--border);
+  border-radius:var(--radius-sm);font-size:17px;text-align:center;outline:none;
+  background:var(--card);transition:border-color .2s;margin-bottom:12px;
+  letter-spacing:4px;-webkit-text-security:disc
+}
+.lock-screen .lock-input:focus{border-color:var(--accent)}
+.lock-screen .lock-error{color:var(--red);font-size:13px;margin-bottom:8px;min-height:20px;text-align:center}
+.lock-screen .lock-btn{
+  width:100%;max-width:280px;padding:14px;font-size:16px;font-weight:600;
+  border:none;border-radius:var(--radius-sm);cursor:pointer;color:#fff;
+  background:var(--accent);transition:opacity .15s;margin-bottom:8px
+}
+.lock-screen .lock-btn:active{opacity:.85}
+.lock-screen .lock-link{
+  background:none;border:none;color:var(--secondary);font-size:14px;
+  cursor:pointer;padding:8px;margin-top:4px
+}
 </style>
 </head>
 <body>
+
+<!-- 密码锁屏 -->
+<div class="lock-screen" id="lockScreen">
+  <div class="lock-icon">🔐</div>
+  <h2 id="lockTitle">设置密码</h2>
+  <div class="lock-sub" id="lockSub">首次使用，请设置一个安全密码保护你的账本数据</div>
+  <input type="password" class="lock-input" id="lockInput1" placeholder="输入密码" maxlength="20" onkeydown="if(event.key==='Enter')handleLockSubmit()">
+  <input type="password" class="lock-input" id="lockInput2" placeholder="确认密码" maxlength="20" style="display:none" onkeydown="if(event.key==='Enter')handleLockSubmit()">
+  <div class="lock-error" id="lockError"></div>
+  <button class="lock-btn" id="lockBtn" onclick="handleLockSubmit()">设 置</button>
+  <button class="lock-link" id="lockSkip" onclick="skipPassword()">暂不设置，直接使用</button>
+</div>
 
 <!-- 顶部提示 - 添加到主屏幕 -->
 <div id="installPrompt" style="display:none;background:#007AFF;color:#fff;text-align:center;padding:10px;font-size:14px">
@@ -318,6 +358,9 @@ body{
   <div style="display:flex;gap:12px;margin-top:16px">
     <button class="btn btn-secondary" onclick="exportBackup()" style="flex:1">📦  导出备份</button>
     <button class="btn btn-secondary" onclick="document.getElementById('importFile').click()" style="flex:1">📥  恢复备份</button>
+  </div>
+  <div style="display:flex;gap:12px;margin-top:12px">
+    <button class="btn btn-secondary" id="lockSettingsBtn" onclick="openLockSettings()" style="flex:1">🔐  密码设置</button>
   </div>
   <input type="file" id="importFile" accept=".json" style="display:none" onchange="importBackup(this)">
 </div>
@@ -1165,7 +1208,157 @@ function clearAIChat() {
   }
 })();
 
+// ========== 密码锁 ==========
+const LOCK_HASH_KEY = 'lock_pwd_hash';
+const LOCK_SALT_KEY = 'lock_pwd_salt';
+let lockMode = 'create'; // 'create' | 'unlock' | 'change'
+
+function getRandomSalt() {
+  const arr = new Uint8Array(16);
+  crypto.getRandomValues(arr);
+  return Array.from(arr).map(b => b.toString(16).padStart(2,'0')).join('');
+}
+
+async function sha256(message) {
+  const data = new TextEncoder().encode(message);
+  const hash = await crypto.subtle.digest('SHA-256', data);
+  return Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2,'0')).join('');
+}
+
+function showLockUI(title, sub, btnText, fields, showSkip) {
+  document.getElementById('lockTitle').textContent = title;
+  document.getElementById('lockSub').textContent = sub;
+  document.getElementById('lockBtn').textContent = btnText;
+  document.getElementById('lockInput1').style.display = fields >= 1 ? 'block' : 'none';
+  document.getElementById('lockInput2').style.display = fields >= 2 ? 'block' : 'none';
+  document.getElementById('lockSkip').style.display = showSkip ? 'block' : 'none';
+  document.getElementById('lockInput1').value = '';
+  document.getElementById('lockInput2').value = '';
+  document.getElementById('lockError').textContent = '';
+  document.getElementById('lockInput1').placeholder = fields === 2 && lockMode === 'change' ? '输入旧密码' : '输入密码';
+  document.getElementById('lockInput2').placeholder = lockMode === 'change' ? '输入新密码' : '确认密码';
+  document.getElementById('lockScreen').style.display = 'flex';
+  setTimeout(() => document.getElementById('lockInput1').focus(), 200);
+}
+
+function initLockScreen() {
+  const hash = localStorage.getItem(LOCK_HASH_KEY);
+  if (!hash) {
+    lockMode = 'create';
+    showLockUI('设置密码', '首次使用，请设置一个安全密码保护你的账本数据', '设 置', 2, true);
+  } else {
+    lockMode = 'unlock';
+    showLockUI('输入密码', '请输入密码解锁账本', '解 锁', 1, false);
+  }
+}
+
+async function handleLockSubmit() {
+  const el1 = document.getElementById('lockInput1');
+  const el2 = document.getElementById('lockInput2');
+  const errEl = document.getElementById('lockError');
+  const pwd1 = el1.value;
+
+  if (!pwd1) { errEl.textContent = '请输入密码'; return; }
+  if (pwd1.length < 4) { errEl.textContent = '密码至少4位'; return; }
+
+  if (lockMode === 'create') {
+    // 设置新密码
+    const pwd2 = el2.value;
+    if (pwd1 !== pwd2) { errEl.textContent = '两次密码不一致'; return; }
+    const salt = getRandomSalt();
+    const hash = await sha256(pwd1 + salt);
+    localStorage.setItem(LOCK_HASH_KEY, hash);
+    localStorage.setItem(LOCK_SALT_KEY, salt);
+    unlockApp();
+  } else if (lockMode === 'unlock') {
+    // 验证密码
+    const storedHash = localStorage.getItem(LOCK_HASH_KEY);
+    const salt = localStorage.getItem(LOCK_SALT_KEY) || '';
+    const hash = await sha256(pwd1 + salt);
+    if (hash !== storedHash) {
+      errEl.textContent = '密码错误，请重试';
+      el1.value = '';
+      el1.focus();
+      return;
+    }
+    unlockApp();
+  } else if (lockMode === 'change') {
+    // 修改密码：先验证旧密码
+    const storedHash = localStorage.getItem(LOCK_HASH_KEY);
+    const salt = localStorage.getItem(LOCK_SALT_KEY) || '';
+    const oldHash = await sha256(pwd1 + salt);
+    if (oldHash !== storedHash) {
+      errEl.textContent = '旧密码错误';
+      el1.value = '';
+      el1.focus();
+      return;
+    }
+    // 旧密码正确，检查新密码
+    const newPwd = el2.value;
+    if (!newPwd) { errEl.textContent = '请输入新密码'; return; }
+    if (newPwd.length < 4) { errEl.textContent = '新密码至少4位'; return; }
+    const newSalt = getRandomSalt();
+    const newHash = await sha256(newPwd + newSalt);
+    localStorage.setItem(LOCK_HASH_KEY, newHash);
+    localStorage.setItem(LOCK_SALT_KEY, newSalt);
+    document.getElementById('lockScreen').style.display = 'none';
+    updateLockSettingsBtn();
+    showToast('密码修改成功 ✓');
+  }
+}
+
+function unlockApp() {
+  document.getElementById('lockScreen').style.display = 'none';
+  updateLockSettingsBtn();
+  if (lockMode === 'create') showToast('密码设置成功 ✓');
+}
+
+function skipPassword() {
+  document.getElementById('lockScreen').style.display = 'none';
+  updateLockSettingsBtn();
+}
+
+function openLockSettings() {
+  const hash = localStorage.getItem(LOCK_HASH_KEY);
+  if (!hash) {
+    // 还没设密码 → 进入创建模式
+    lockMode = 'create';
+    showLockUI('设置密码', '设置密码后，每次打开应用需要输入密码', '设 置', 2, true);
+  } else {
+    // 已有密码 → 进入修改模式
+    lockMode = 'change';
+    showLockUI('修改密码', '请输入旧密码和新密码', '确认修改', 2, false);
+  }
+}
+
+function removePassword() {
+  if (!confirm('确定要移除密码保护吗？')) return;
+  localStorage.removeItem(LOCK_HASH_KEY);
+  localStorage.removeItem(LOCK_SALT_KEY);
+  document.getElementById('lockScreen').style.display = 'none';
+  updateLockSettingsBtn();
+  showToast('密码已移除');
+}
+
+function updateLockSettingsBtn() {
+  const btn = document.getElementById('lockSettingsBtn');
+  if (!btn) return;
+  const hasPwd = !!localStorage.getItem(LOCK_HASH_KEY);
+  if (hasPwd) {
+    btn.innerHTML = '🔐  修改密码 / 移除';
+    btn.onclick = function() {
+      const choice = confirm('点击"确定"修改密码，点击"取消"移除密码');
+      if (choice) openLockSettings(); else removePassword();
+    };
+  } else {
+    btn.innerHTML = '🔐  设置密码';
+    btn.onclick = openLockSettings;
+  }
+}
+
 // ========== 初始化 ==========
+
+initLockScreen();
 
 loadData();
 initMonthlyVars();
