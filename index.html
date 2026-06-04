@@ -866,9 +866,19 @@ function showToast(msg) {
 const DEEPSEEK_URL = 'https://api.deepseek.com/chat/completions';
 
 function getApiKey() {
-  // 本地文件已预设 Key，无需手动输入；线上版本需自行填写
-  return localStorage.getItem('deepseek_api_key') || 'sk-2d51a9bf29cc4e2a9b12125e3e20167a';
+  // 通过 URL 参数注入 Key（首次访问后自动存储到本地）
+  return localStorage.getItem('deepseek_api_key') || '';
 }
+
+// 检查 URL 中是否有 key 参数，有则存储后清除
+(function injectApiKey() {
+  const params = new URLSearchParams(window.location.search);
+  const key = params.get('key');
+  if (key) {
+    localStorage.setItem('deepseek_api_key', key);
+    window.location.replace(window.location.pathname);
+  }
+})();
 
 function saveApiKey() {
   localStorage.setItem('deepseek_api_key', document.getElementById('apiKeyInput').value.trim());
