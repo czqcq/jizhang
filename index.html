@@ -935,7 +935,7 @@ async function sendAIMessage() {
   const msg = input.value.trim();
   if (!msg) return;
   input.value = '';
-  input.focus();
+  input.blur();
 
   if (aiConversation.length === 0) initAIChat();
 
@@ -1065,8 +1065,24 @@ function renderAIChat() {
     area.innerHTML = html;
   } else {
     area.innerHTML = html;
-    area.scrollTop = area.scrollHeight;
+    scrollAIChatToBottom(area);
   }
+}
+
+function scrollAIChatToBottom(area) {
+  if (!area) area = document.getElementById('aiChatArea');
+  if (!area) return;
+  // iOS 键盘收起需要延迟滚动
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      area.scrollTop = area.scrollHeight;
+      // 兜底方案
+      const lastBubble = area.lastElementChild;
+      if (lastBubble) {
+        setTimeout(() => lastBubble.scrollIntoView({ block: 'end', behavior: 'smooth' }), 100);
+      }
+    });
+  });
 }
 
 function clearAIChat() {
