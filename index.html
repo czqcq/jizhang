@@ -11,170 +11,235 @@
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
-  --blue:#007AFF;--green:#34C759;--orange:#FF9500;--red:#FF3B30;
-  --bg:#F2F2F7;--card:#FFFFFF;--text:#1C1C1E;--secondary:#8E8E93;
-  --separator:#E5E5EA;--radius:12px
+  --accent:#2563EB;--green:#059669;--red:#DC2626;--orange:#D97706;
+  --bg:#F8FAFC;--card:#FFFFFF;--text:#0F172A;--secondary:#64748B;
+  --border:#E2E8F0;--border-light:#F1F5F9;--radius:16px;--radius-sm:12px
 }
 body{
-  font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',sans-serif;
   background:var(--bg);color:var(--text);-webkit-font-smoothing:antialiased;
-  overscroll-behavior:none;padding-bottom:env(safe-area-inset-bottom,0)
+  overscroll-behavior:none;padding-bottom:env(safe-area-inset-bottom,0);
+  line-height:1.6
 }
+
+/* ── 底部导航 ── */
 .tab-bar{
   position:fixed;bottom:0;left:0;right:0;background:var(--card);
-  border-top:1px solid var(--separator);display:flex;z-index:100;
-  padding-bottom:env(safe-area-inset-bottom,0)
+  border-top:1px solid var(--border);display:flex;z-index:100;
+  padding:6px 0;padding-bottom:calc(6px + env(safe-area-inset-bottom,0))
 }
 .tab-btn{
-  flex:1;padding:8px 0 6px;border:none;background:none;color:var(--secondary);
-  font-size:11px;display:flex;flex-direction:column;align-items:center;
-  gap:4px;cursor:pointer;transition:color .15s
+  flex:1;padding:4px 0;border:none;background:none;color:var(--secondary);
+  font-size:10px;font-weight:500;display:flex;flex-direction:column;
+  align-items:center;gap:3px;cursor:pointer;transition:color .2s;
+  -webkit-tap-highlight-color:transparent
 }
-.tab-btn.active{color:var(--blue)}
-.tab-btn svg{width:24px;height:24px}
-.page{display:none;padding:16px 16px 100px;max-width:500px;margin:0 auto}
+.tab-btn.active{color:var(--accent)}
+.tab-btn svg{width:22px;height:22px}
+.tab-btn.active svg{opacity:1}
+
+/* ── 页面容器 ── */
+.page{display:none;padding:8px 16px 110px;max-width:480px;margin:0 auto}
 .page.active{display:block}
 
-/* 头部导航 */
+/* ── 头部导航 ── */
 .nav-header{
-  text-align:center;padding:20px 0 16px;font-size:18px;font-weight:700
+  text-align:center;padding:24px 0 8px;font-size:20px;font-weight:700;
+  letter-spacing:-.2px;color:var(--text)
 }
 .date-nav{
-  display:flex;align-items:center;justify-content:center;gap:12px;margin-bottom:16px
+  display:flex;align-items:center;justify-content:center;gap:8px;
+  margin-bottom:20px
 }
-.date-nav button{background:none;border:none;font-size:20px;color:var(--blue);cursor:pointer;padding:4px 8px}
-.date-nav .date-text{font-size:17px;font-weight:600;min-width:160px;text-align:center}
+.date-nav button{
+  width:36px;height:36px;display:flex;align-items:center;justify-content:center;
+  background:var(--card);border:1px solid var(--border);border-radius:50%;
+  font-size:14px;color:var(--secondary);cursor:pointer;transition:all .15s
+}
+.date-nav button:active{background:var(--border-light)}
+.date-nav .date-text{
+  font-size:16px;font-weight:600;min-width:150px;text-align:center;
+  color:var(--text);cursor:pointer;padding:4px 8px;
+  border-radius:8px;transition:background .15s
+}
+.date-nav .date-text:active{background:var(--border-light)}
 
-/* 表单卡片 */
+/* ── 卡片 ── */
 .card{
-  background:var(--card);border-radius:var(--radius);margin-bottom:16px;
-  overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.04)
+  background:var(--card);border-radius:var(--radius);margin-bottom:12px;
+  overflow:hidden;border:1px solid var(--border)
 }
 .card-header{
-  padding:12px 16px 6px;font-size:13px;color:var(--secondary);
-  text-transform:uppercase;letter-spacing:.5px
+  padding:14px 16px 0;font-size:12px;color:var(--secondary);
+  font-weight:600;letter-spacing:.3px;text-transform:uppercase
 }
 .card-row{
-  display:flex;align-items:center;padding:10px 16px;
-  border-bottom:1px solid var(--separator)
+  display:flex;align-items:center;padding:12px 16px;
+  border-bottom:1px solid var(--border-light)
 }
 .card-row:last-child{border-bottom:none}
-.card-row .icon{font-size:24px;margin-right:12px}
-.card-row .label{flex:1;font-size:16px}
+.card-row .icon{font-size:22px;margin-right:10px;opacity:.85}
+.card-row .label{flex:1;font-size:15px;font-weight:500;color:var(--text)}
 .card-row input{
-  width:100px;text-align:right;border:1px solid var(--separator);
-  border-radius:8px;padding:8px 10px;font-size:16px;outline:none
+  width:100px;text-align:right;border:1.5px solid var(--border);
+  border-radius:10px;padding:10px 12px;font-size:15px;outline:none;
+  background:var(--bg);transition:border-color .2s,background .2s;
+  font-weight:500;color:var(--text)
 }
-.card-row input:focus{border-color:var(--blue)}
-.card-row .prefix{color:var(--secondary);font-size:16px;margin-right:4px}
+.card-row input:focus{border-color:var(--accent);background:var(--card)}
+.card-row .prefix{color:var(--secondary);font-size:15px;margin-right:2px;font-weight:500}
 
+/* ── 合计行 ── */
 .total-row{
-  display:flex;justify-content:flex-end;padding:8px 16px;
-  font-size:14px;color:var(--blue);font-weight:500
+  display:flex;justify-content:flex-end;padding:10px 16px;
+  font-size:13px;color:var(--accent);font-weight:600
 }
 .total-row.expense{color:var(--orange)}
 
+/* ── 利润卡片 ── */
 .profit-row{
-  display:flex;align-items:center;padding:14px 16px;
-  background:var(--card);border-radius:var(--radius);
-  margin-bottom:16px;box-shadow:0 1px 3px rgba(0,0,0,0.04)
+  display:flex;align-items:center;padding:16px 20px;
+  background:var(--card);border-radius:var(--radius);margin-bottom:16px;
+  border:1px solid var(--border)
 }
-.profit-row .label{flex:1;font-size:17px;font-weight:600}
-.profit-row .value{font-size:22px;font-weight:700}
+.profit-row .label{flex:1;font-size:16px;font-weight:600;color:var(--text)}
+.profit-row .value{font-size:24px;font-weight:700;letter-spacing:-.5px}
 
-/* 按钮 */
+/* ── 按钮 ── */
 .btn{
-  display:block;width:100%;padding:14px;font-size:17px;font-weight:600;
-  border:none;border-radius:var(--radius);cursor:pointer;color:#fff;
-  background:var(--blue);margin-bottom:16px
+  display:block;width:100%;padding:14px;font-size:15px;font-weight:600;
+  border:none;border-radius:var(--radius-sm);cursor:pointer;color:#fff;
+  background:var(--accent);margin-bottom:12px;transition:opacity .15s;
+  -webkit-tap-highlight-color:transparent
 }
-.btn:active{opacity:.8}
+.btn:active{opacity:.85}
 .btn-secondary{
-  background:var(--card);color:var(--blue);border:1px solid var(--blue)
+  background:var(--card);color:var(--accent);border:1.5px solid var(--border);
+  font-weight:500
 }
+.btn-secondary:active{background:var(--border-light)}
 
-/* 月度汇总行 */
+/* ── 月度汇总行 ── */
 .summary-row{
-  display:flex;padding:10px 16px;border-bottom:1px solid var(--separator)
+  display:flex;align-items:center;padding:12px 16px;
+  border-bottom:1px solid var(--border-light)
 }
 .summary-row:last-child{border-bottom:none}
-.summary-row .icon{font-size:20px;margin-right:12px}
-.summary-row .label{flex:1;font-size:16px}
-.summary-row .value{font-size:16px;font-weight:500}
+.summary-row .icon{font-size:20px;margin-right:10px;opacity:.85}
+.summary-row .label{flex:1;font-size:15px;font-weight:500}
+.summary-row .value{font-size:15px;font-weight:600;color:var(--text)}
 
-/* 历史 */
+/* ── 历史记录 ── */
 .section-header{
-  padding:8px 0;font-size:13px;color:var(--secondary);font-weight:600
+  padding:8px 0;font-size:12px;color:var(--secondary);font-weight:600;
+  letter-spacing:.3px
 }
 .history-item{
-  background:var(--card);border-radius:var(--radius);padding:12px 16px;
-  margin-bottom:8px;box-shadow:0 1px 2px rgba(0,0,0,0.03)
+  background:var(--card);border-radius:var(--radius-sm);padding:14px 16px;
+  margin-bottom:8px;border:1px solid var(--border)
 }
-.history-item .date{font-size:15px;font-weight:600;margin-bottom:4px}
-.history-item .detail{font-size:13px;color:var(--secondary)}
-.history-item .right{text-align:right;font-size:17px;font-weight:600;color:var(--blue)}
+.history-item .date{font-size:15px;font-weight:600;margin-bottom:2px}
+.history-item .detail{font-size:12px;color:var(--secondary);line-height:1.5}
+.history-item .right{text-align:right;font-size:17px;font-weight:700;color:var(--accent)}
 
 .month-summary{
-  background:var(--card);border-radius:var(--radius);padding:10px 16px;
-  margin-bottom:12px;font-size:13px;display:flex;gap:12px;
-  justify-content:center;box-shadow:0 1px 2px rgba(0,0,0,0.03)
+  background:var(--card);border-radius:var(--radius-sm);padding:10px 16px;
+  margin-bottom:12px;font-size:12px;display:flex;gap:14px;
+  justify-content:center;border:1px solid var(--border);flex-wrap:wrap
 }
-.month-summary span{white-space:nowrap}
+.month-summary span{white-space:nowrap;font-weight:500}
 
 .year-header{
-  font-size:16px;font-weight:700;padding:16px 0 8px;
-  color:var(--text)
+  font-size:17px;font-weight:700;padding:20px 0 10px;
+  color:var(--text);letter-spacing:-.2px
 }
 
-/* Toast */
+/* ── Toast ── */
 .toast{
   position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);
-  background:rgba(0,0,0,0.8);color:#fff;padding:12px 24px;
-  border-radius:20px;font-size:15px;z-index:999;opacity:0;
-  transition:opacity .2s;pointer-events:none
+  background:var(--text);color:#fff;padding:12px 28px;
+  border-radius:12px;font-size:14px;z-index:999;opacity:0;
+  transition:opacity .2s;pointer-events:none;font-weight:500
 }
 .toast.show{opacity:1}
 
+/* ── 空状态 ── */
 .empty-state{
   text-align:center;padding:60px 20px;color:var(--secondary)
 }
-.empty-state .icon{font-size:48px;margin-bottom:16px}
-.empty-state .text{font-size:15px}
+.empty-state .icon{font-size:48px;margin-bottom:12px}
+.empty-state .text{font-size:15px;line-height:1.6}
 
-/* 月份选择器 */
-.month-picker{display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:16px}
-.month-picker select{
-  font-size:16px;padding:8px 12px;border:1px solid var(--separator);
-  border-radius:8px;background:var(--card);outline:none
+/* ── 月份选择器 ── */
+.month-picker{
+  display:flex;align-items:center;justify-content:center;gap:6px;margin-bottom:20px
 }
+.month-picker select{
+  font-size:15px;padding:10px 14px;border:1.5px solid var(--border);
+  border-radius:10px;background:var(--card);outline:none;font-weight:500;
+  color:var(--text);appearance:none;-webkit-appearance:none;
+  cursor:pointer
+}
+.month-picker button{
+  width:32px;height:32px;display:flex;align-items:center;justify-content:center;
+  background:var(--card);border:1px solid var(--border);border-radius:50%;
+  font-size:12px;color:var(--secondary);cursor:pointer;transition:all .15s
+}
+.month-picker button:active{background:var(--border-light)}
 
-/* 弹出选择器 */
+/* ── 日期选择器弹出层 ── */
 .picker-overlay{
-  position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.3);
-  z-index:200;display:none;justify-content:center;align-items:center
+  position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(15,23,42,.4);
+  z-index:200;display:none;justify-content:center;align-items:center;
+  backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px)
 }
 .picker-overlay.show{display:flex}
 .picker-panel{
-  background:var(--card);border-radius:16px;width:90%;max-width:360px;
-  max-height:70vh;overflow-y:auto;padding:16px
+  background:var(--card);border-radius:20px;width:90%;max-width:360px;
+  max-height:70vh;overflow-y:auto;padding:20px;border:1px solid var(--border)
 }
-.picker-panel h3{text-align:center;margin-bottom:12px;font-size:17px}
+.picker-panel h3{text-align:center;margin-bottom:14px;font-size:17px;font-weight:700}
 .picker-item{
-  padding:12px 16px;text-align:center;border-bottom:1px solid var(--separator);
-  cursor:pointer;font-size:16px;border-radius:8px
+  padding:13px 16px;text-align:center;border-bottom:1px solid var(--border-light);
+  cursor:pointer;font-size:15px;border-radius:10px;transition:all .15s
 }
-.picker-item:hover,.picker-item.selected{background:var(--blue);color:#fff}
+.picker-item:active{background:var(--border-light)}
+.picker-item.selected{background:var(--accent);color:#fff;font-weight:600}
 .picker-close{
-  display:block;margin:12px auto 0;padding:10px 24px;border:none;
-  background:var(--bg);border-radius:8px;font-size:16px;cursor:pointer
+  display:block;margin:14px auto 0;padding:10px 28px;border:1.5px solid var(--border);
+  background:var(--card);border-radius:10px;font-size:15px;cursor:pointer;
+  font-weight:500;color:var(--secondary);transition:all .15s
 }
+.picker-close:active{background:var(--border-light)}
 
-/* AI 聊天 */
-.ai-bubble{max-width:85%;padding:10px 14px;border-radius:16px;margin-bottom:10px;font-size:15px;line-height:1.6;word-break:break-word}
-.ai-bubble.user{background:var(--blue);color:#fff;margin-left:auto;border-bottom-right-radius:4px}
-.ai-bubble.assistant{background:#E9E9EF;color:var(--text);margin-right:auto;border-bottom-left-radius:4px}
-.ai-chat-area{max-height:52vh;overflow-y:auto;scroll-behavior:smooth}
-.ai-bubble .role-label{font-size:11px;opacity:0.7;margin-bottom:4px}
+/* ── AI 聊天 ── */
+.ai-chat-area{max-height:50vh;overflow-y:auto;scroll-behavior:smooth;padding:4px 0}
+.ai-bubble{
+  max-width:82%;padding:12px 16px;border-radius:18px;margin-bottom:8px;
+  font-size:14px;line-height:1.65;word-break:break-word
+}
+.ai-bubble.user{
+  background:var(--accent);color:#fff;margin-left:auto;
+  border-bottom-right-radius:6px
+}
+.ai-bubble.assistant{
+  background:var(--border-light);color:var(--text);margin-right:auto;
+  border-bottom-left-radius:6px
+}
+.ai-bubble .role-label{font-size:10px;opacity:.6;margin-bottom:3px;font-weight:600;letter-spacing:.3px}
+
+/* ── AI 输入栏 ── */
+#aiUserInput{
+  flex:1;border:1.5px solid var(--border)!important;border-radius:var(--radius-sm)!important;
+  padding:12px 14px!important;font-size:15px!important;background:var(--card)!important;
+  transition:border-color .2s
+}
+#aiUserInput:focus{border-color:var(--accent)!important}
+
+/* ── 安装提示 ── */
+#installPrompt{
+  background:var(--accent)!important;color:#fff!important
+}
 </style>
 </head>
 <body>
@@ -183,7 +248,6 @@ body{
 <div id="installPrompt" style="display:none;background:#007AFF;color:#fff;text-align:center;padding:10px;font-size:14px">
   点击下方 <b>分享按钮</b> → <b>添加到主屏幕</b> 获得 App 体验
   <button onclick="this.parentElement.style.display='none'" style="background:none;border:none;color:#fff;font-size:18px;margin-left:8px;cursor:pointer">&times;</button>
-</div>
 </div>
 
 <!-- Toast -->
@@ -220,14 +284,14 @@ body{
 <div class="page" id="page-monthly">
   <div class="nav-header">月度汇总</div>
   <div class="month-picker">
-    <button onclick="changeMonth(-1)" style="background:none;border:none;font-size:20px;color:var(--blue);cursor:pointer">◀</button>
+    <button onclick="changeMonth(-1)">◀</button>
     <select id="monthYearSelect" onchange="onMonthChange()">
       <option value="2025">2025年</option>
     </select>
     <select id="monthSelect" onchange="renderMonthly()">
       <option value="1">1月</option>
     </select>
-    <button onclick="changeMonth(1)" style="background:none;border:none;font-size:20px;color:var(--blue);cursor:pointer">▶</button>
+    <button onclick="changeMonth(1)">▶</button>
   </div>
 
   <div class="card">
@@ -264,7 +328,7 @@ body{
 
   <div id="aiChatArea" class="ai-chat-area" style="margin-bottom:12px"></div>
 
-  <div id="aiLoading" style="display:none;text-align:center;padding:12px;color:var(--blue);font-size:14px">
+  <div id="aiLoading" style="display:none;text-align:center;padding:12px;color:var(--accent);font-size:14px">
     ⏳ AI 思考中...
   </div>
 
@@ -275,13 +339,13 @@ body{
 
   <!-- 输入栏 -->
   <div style="display:flex;gap:8px;margin-bottom:16px">
-    <input type="text" id="aiUserInput" placeholder="输入问题..." style="flex:1;padding:12px;border:1px solid var(--separator);border-radius:var(--radius);font-size:15px;outline:none" onkeydown="if(event.key==='Enter')sendAIMessage()">
-    <button onclick="sendAIMessage()" style="padding:12px 16px;background:var(--blue);color:#fff;border:none;border-radius:var(--radius);font-size:15px;cursor:pointer;font-weight:600">发送</button>
+    <input type="text" id="aiUserInput" placeholder="输入问题..." onkeydown="if(event.key==='Enter')sendAIMessage()">
+    <button onclick="sendAIMessage()" style="padding:12px 16px;background:var(--accent);color:#fff;border:none;border-radius:var(--radius-sm);font-size:15px;cursor:pointer;font-weight:600">发送</button>
   </div>
 
   <div style="text-align:center;color:var(--secondary);font-size:11px;padding:0 0 12px">
-    <a href="https://platform.deepseek.com/api_keys" target="_blank" style="color:var(--blue)">API Key</a>
-    &nbsp;|&nbsp;模型：<select id="modelSelect" onchange="saveModel()" style="font-size:11px;border:1px solid #ddd;border-radius:4px">
+    <a href="https://platform.deepseek.com/api_keys" target="_blank" style="color:var(--accent)">API Key</a>
+    &nbsp;|&nbsp;模型：<select id="modelSelect" onchange="saveModel()" style="font-size:11px;border:1px solid var(--border);border-radius:6px;padding:2px 4px;background:var(--card)">
       <option value="deepseek-chat">标准</option>
       <option value="deepseek-reasoner">深度</option>
     </select>
@@ -581,7 +645,7 @@ function renderMonthly() {
       '</div>';
   });
   expHtml += '<div class="card-row" style="justify-content:center;padding:12px">' +
-    '<button onclick="addExpenseItem()" style="background:none;border:none;color:var(--blue);font-size:15px;cursor:pointer;padding:4px 0">+ 添加支出项</button>' +
+    '<button onclick="addExpenseItem()" style="background:none;border:none;color:var(--accent);font-size:15px;cursor:pointer;padding:4px 0">+ 添加支出项</button>' +
     '</div>';
   document.getElementById('monthlyExpenseCard').innerHTML = expHtml;
   updateExpenseTotal();
@@ -714,7 +778,7 @@ function renderHistory() {
 
     html += '<div class="year-header">' + ym + '</div>';
     html += '<div class="month-summary">' +
-      '<span style="color:var(--blue)">营收：¥'+monthRevenue.toFixed(2)+'</span>' +
+      '<span style="color:var(--accent)">营收：¥'+monthRevenue.toFixed(2)+'</span>' +
       '<span style="color:var(--orange)">支出：¥'+monthExp.toFixed(2)+'</span>' +
       '<span style="color:'+(monthProfit>=0?'var(--green)':'var(--red)')+'">利润：¥'+monthProfit.toFixed(2)+'</span>' +
       '</div>';
@@ -1059,7 +1123,7 @@ function renderAIChat() {
     html = '<div style="text-align:center;color:var(--secondary);padding:40px 20px;font-size:14px">'+
       '👋 你好！我是你的经营分析助手<br><br>'+
       '可以问我：</div>'+
-      '<div class="ai-bubble assistant" style="margin-left:0;margin-right:auto;background:#E9E9EF;width:fit-content;max-width:90%">'+
+      '<div class="ai-bubble assistant" style="margin-left:0;margin-right:auto;width:fit-content;max-width:90%">'+
       '💡 哪个渠道营收最高？<br>💡 这个月比上个月赚得多吗？<br>💡 怎么降低成本？<br>💡 利润增长有什么建议？'+
       '</div>';
     area.innerHTML = html;
