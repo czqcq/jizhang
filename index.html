@@ -282,6 +282,7 @@ body{
   <div class="lock-error" id="lockError"></div>
   <button class="lock-btn" id="lockBtn" onclick="handleLockSubmit()">设 置</button>
   <button class="lock-link" id="lockSkip" onclick="skipPassword()">暂不设置，直接使用</button>
+  <button class="lock-link" id="lockReset" onclick="resetLockPassword()" style="display:none;color:var(--red)">忘记密码</button>
 </div>
 
 <!-- 顶部提示 - 添加到主屏幕 -->
@@ -1234,6 +1235,7 @@ function showLockUI(title, sub, btnText, fields, showSkip) {
   document.getElementById('lockInput1').style.display = fields >= 1 ? 'block' : 'none';
   document.getElementById('lockInput2').style.display = fields >= 2 ? 'block' : 'none';
   document.getElementById('lockSkip').style.display = showSkip ? 'block' : 'none';
+  document.getElementById('lockReset').style.display = lockMode === 'unlock' ? 'block' : 'none';
   document.getElementById('lockInput1').value = '';
   document.getElementById('lockInput2').value = '';
   document.getElementById('lockError').textContent = '';
@@ -1320,6 +1322,14 @@ function unlockApp() {
 function skipPassword() {
   document.getElementById('lockScreen').style.display = 'none';
   updateLockSettingsBtn();
+}
+
+function resetLockPassword() {
+  if (!confirm('确定要重置密码吗？\n\n你的账本数据不会丢失，但你将需要设置一个新密码。')) return;
+  localStorage.removeItem(LOCK_HASH_KEY);
+  localStorage.removeItem(LOCK_SALT_KEY);
+  lockMode = 'create';
+  showLockUI('设置新密码', '请设置一个新的安全密码', '设 置', 2, true);
 }
 
 function openLockSettings() {
