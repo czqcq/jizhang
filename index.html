@@ -168,6 +168,13 @@ body{
   display:block;margin:12px auto 0;padding:10px 24px;border:none;
   background:var(--bg);border-radius:8px;font-size:16px;cursor:pointer
 }
+
+/* AI 聊天 */
+.ai-bubble{max-width:85%;padding:10px 14px;border-radius:16px;margin-bottom:10px;font-size:15px;line-height:1.6;word-break:break-word}
+.ai-bubble.user{background:var(--blue);color:#fff;margin-left:auto;border-bottom-right-radius:4px}
+.ai-bubble.assistant{background:#E9E9EF;color:var(--text);margin-right:auto;border-bottom-left-radius:4px}
+.ai-chat-area{max-height:52vh;overflow-y:auto;scroll-behavior:smooth}
+.ai-bubble .role-label{font-size:11px;opacity:0.7;margin-bottom:4px}
 </style>
 </head>
 <body>
@@ -255,30 +262,28 @@ body{
 <div class="page" id="page-ai">
   <div class="nav-header">AI 智能分析</div>
 
-  <div class="card">
-    <div class="card-header">API 设置</div>
-    <div class="card-row">
-      <span class="label" style="font-size:14px">DeepSeek API Key</span>
-    </div>
-    <div class="card-row">
-      <input type="password" id="apiKeyInput" placeholder="sk-..." style="width:100%;text-align:left;font-size:14px" onchange="saveApiKey()">
-    </div>
+  <div id="aiChatArea" class="ai-chat-area" style="margin-bottom:12px"></div>
+
+  <div id="aiLoading" style="display:none;text-align:center;padding:12px;color:var(--blue);font-size:14px">
+    ⏳ AI 思考中...
   </div>
 
-  <div id="aiLoading" style="display:none;text-align:center;padding:20px;color:var(--blue)">
-    ⏳ AI 正在分析中...
+  <div style="display:flex;gap:8px;margin-bottom:12px">
+    <button class="btn btn-secondary" onclick="runAIAnalysis()" style="flex:1;margin-bottom:0;font-size:14px;padding:10px">📊 分析本月</button>
+    <button class="btn btn-secondary" onclick="clearAIChat()" style="flex:1;margin-bottom:0;font-size:14px;padding:10px">🗑️ 清空对话</button>
   </div>
 
-  <div id="aiResult" style="display:none;background:var(--card);border-radius:var(--radius);padding:16px;margin-bottom:16px;line-height:1.7;font-size:15px;white-space:pre-wrap"></div>
+  <!-- 输入栏 -->
+  <div style="display:flex;gap:8px;margin-bottom:16px">
+    <input type="text" id="aiUserInput" placeholder="输入问题..." style="flex:1;padding:12px;border:1px solid var(--separator);border-radius:var(--radius);font-size:15px;outline:none" onkeydown="if(event.key==='Enter')sendAIMessage()">
+    <button onclick="sendAIMessage()" style="padding:12px 16px;background:var(--blue);color:#fff;border:none;border-radius:var(--radius);font-size:15px;cursor:pointer;font-weight:600">发送</button>
+  </div>
 
-  <button class="btn" onclick="runAIAnalysis()">🤖 分析本月经营数据</button>
-
-  <div style="text-align:center;color:var(--secondary);font-size:12px;padding:12px">
-    使用 DeepSeek API 分析<br>
-    <a href="https://platform.deepseek.com/api_keys" target="_blank" style="color:var(--blue)">获取 API Key</a>
-    &nbsp;|&nbsp;余额不足时换模型：<select id="modelSelect" onchange="saveModel()" style="font-size:12px;border:1px solid #ddd;border-radius:4px">
-      <option value="deepseek-chat">deepseek-chat (标准)</option>
-      <option value="deepseek-reasoner">deepseek-reasoner (深度)</option>
+  <div style="text-align:center;color:var(--secondary);font-size:11px;padding:0 0 12px">
+    <a href="https://platform.deepseek.com/api_keys" target="_blank" style="color:var(--blue)">API Key</a>
+    &nbsp;|&nbsp;模型：<select id="modelSelect" onchange="saveModel()" style="font-size:11px;border:1px solid #ddd;border-radius:4px">
+      <option value="deepseek-chat">标准</option>
+      <option value="deepseek-reasoner">深度</option>
     </select>
   </div>
 </div>
@@ -864,24 +869,12 @@ function showToast(msg) {
 
 // ========== AI 分析 (DeepSeek) ==========
 const DEEPSEEK_URL = 'https://api.deepseek.com/chat/completions';
+let aiConversation = []; // 对话历史 [{role, content}, ...]
+let aiSystemContext = ''; // 当前月数据上下文
 
 function getApiKey() {
-  // 通过 URL 参数注入 Key（首次访问后自动存储到本地）
+  // 本地文件预设 Key，线上版本请用 URL 参数注入
   return localStorage.getItem('deepseek_api_key') || '';
-}
-
-// 检查 URL 中是否有 key 参数，有则存储后清除
-(function injectApiKey() {
-  const params = new URLSearchParams(window.location.search);
-  const key = params.get('key');
-  if (key) {
-    localStorage.setItem('deepseek_api_key', key);
-    window.location.replace(window.location.pathname);
-  }
-})();
-
-function saveApiKey() {
-  localStorage.setItem('deepseek_api_key', document.getElementById('apiKeyInput').value.trim());
 }
 
 function getModel() {
@@ -893,18 +886,12 @@ function saveModel() {
 }
 
 function renderAIPage() {
-  document.getElementById('apiKeyInput').value = getApiKey();
   document.getElementById('modelSelect').value = getModel();
+  renderAIChat();
 }
 
-async function runAIAnalysis() {
-  const apiKey = getApiKey();
-  if (!apiKey) {
-    showToast('请先填写 API Key');
-    return;
-  }
-
-  // 收集当前月份数据
+// 构建包含当前月数据的系统提示
+function buildSystemContext() {
   const now = new Date();
   const yr = now.getFullYear();
   const mo = now.getMonth() + 1;
@@ -920,40 +907,55 @@ async function runAIAnalysis() {
   const totalExp = exp.items.reduce((s,it)=>s+(it.amount||0),0);
   const netProfit = totalRevenue - totalExp;
 
-  // 上月对比
   let prevMo=mo-1, prevYr=yr;
   if(prevMo===0){prevMo=12;prevYr--;}
   const prevRecords = getRecordsForMonth(prevYr, prevMo);
-  const prevExpense = getExpense(prevYr, prevMo);
   let prevRevenue = 0;
   prevRecords.forEach(r=>{prevRevenue+=(r.meituan||0)+(r.douyin||0)+(r.alipay||0)+(r.wechat||0)+(r.cash||0);});
-  const prevExp = prevExpense.items.reduce((s,it)=>s+(it.amount||0),0);
-
-  // 构建提示词
-  const systemPrompt = '你是一个专业的餐饮/零售行业经营分析助手。请根据提供的经营数据，给出简洁实用的分析建议。用中文回答，不超过500字。';
 
   let expenseDetail = exp.items.map(it=>'  - '+it.label+'：¥'+((it.amount||0)).toFixed(2)).join('\n');
-  const userPrompt = '请分析以下月度经营数据：\n\n'+
-    yr+'年'+mo+'月数据：\n'+
-    '营收：\n'+
-    '  - 美团：¥'+totalMeituan.toFixed(2)+'\n'+
-    '  - 抖音：¥'+totalDouyin.toFixed(2)+'\n'+
-    '  - 支付宝：¥'+totalAlipay.toFixed(2)+'\n'+
-    '  - 微信：¥'+totalWechat.toFixed(2)+'\n'+
-    '  - 现金：¥'+totalCash.toFixed(2)+'\n'+
-    '营收合计：¥'+totalRevenue.toFixed(2)+'\n'+
-    '支出：\n'+expenseDetail+'\n'+
-    '支出合计：¥'+totalExp.toFixed(2)+'\n'+
-    '纯利润：¥'+netProfit.toFixed(2)+'\n'+
-    '利润率：'+ (totalRevenue>0 ? (netProfit/totalRevenue*100).toFixed(1) : '0') +'%\n\n'+
-    '上月对比：\n'+
-    '  上月营收：¥'+prevRevenue.toFixed(2)+'\n'+
-    '  上月支出：¥'+prevExp.toFixed(2)+'\n'+
-    '  营收环比：'+ (prevRevenue>0 ? ((totalRevenue-prevRevenue)/prevRevenue*100).toFixed(1) : 'N/A') +'%\n\n'+
-    '请分析：1) 营收结构和渠道表现 2) 成本控制情况 3) 与上月对比的变化趋势 4) 具体改进建议';
+  return '当前'+yr+'年'+mo+'月经营数据：\n'+
+    '营收：美团¥'+totalMeituan.toFixed(2)+' 抖音¥'+totalDouyin.toFixed(2)+
+    ' 支付宝¥'+totalAlipay.toFixed(2)+' 微信¥'+totalWechat.toFixed(2)+' 现金¥'+totalCash.toFixed(2)+
+    '（合计¥'+totalRevenue.toFixed(2)+'）\n'+
+    '支出：\n'+expenseDetail+'\n支出合计¥'+totalExp.toFixed(2)+'\n'+
+    '纯利润¥'+netProfit.toFixed(2)+' 利润率'+(totalRevenue>0?(netProfit/totalRevenue*100).toFixed(1):'0')+'%\n'+
+    '上月营收¥'+prevRevenue.toFixed(2)+' 环比'+(prevRevenue>0?((totalRevenue-prevRevenue)/prevRevenue*100).toFixed(1):'N/A')+'%';
+}
+
+function initAIChat() {
+  aiSystemContext = buildSystemContext();
+  aiConversation = [
+    { role: 'system', content: '你是经营分析助手，请用简洁的中文回答。用户经营数据如下：\n\n' + aiSystemContext + '\n\n请基于以上数据回答用户问题，给出实用建议。' }
+  ];
+}
+
+async function sendAIMessage() {
+  const input = document.getElementById('aiUserInput');
+  const msg = input.value.trim();
+  if (!msg) return;
+  input.value = '';
+  input.focus();
+
+  if (aiConversation.length === 0) initAIChat();
+
+  // 添加用户消息
+  aiConversation.push({ role: 'user', content: msg });
+  renderAIChat();
+
+  // 检查 API Key（没有预设Key时需要手动输入）
+  let apiKey = getApiKey();
+  if (!apiKey) {
+    apiKey = prompt('请输入 DeepSeek API Key（sk-...）：');
+    if (!apiKey) {
+      aiConversation.push({ role: 'assistant', content: '请先设置 API Key 才能使用 AI 功能。' });
+      renderAIChat();
+      return;
+    }
+    localStorage.setItem('deepseek_api_key', apiKey);
+  }
 
   document.getElementById('aiLoading').style.display = 'block';
-  document.getElementById('aiResult').style.display = 'none';
 
   try {
     const model = getModel();
@@ -965,10 +967,7 @@ async function runAIAnalysis() {
       },
       body: JSON.stringify({
         model: model,
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: userPrompt }
-        ],
+        messages: aiConversation,
         temperature: 0.7,
         max_tokens: 800
       })
@@ -978,19 +977,113 @@ async function runAIAnalysis() {
 
     if (!res.ok) {
       const err = await res.json();
-      showToast('API 错误：' + (err.error?.message || res.status));
-      return;
+      aiConversation.push({ role: 'assistant', content: 'API 错误：' + (err.error?.message || res.status) });
+    } else {
+      const data = await res.json();
+      aiConversation.push({ role: 'assistant', content: data.choices[0].message.content });
     }
-
-    const data = await res.json();
-    const reply = data.choices[0].message.content;
-    document.getElementById('aiResult').textContent = reply;
-    document.getElementById('aiResult').style.display = 'block';
   } catch(e) {
     document.getElementById('aiLoading').style.display = 'none';
-    showToast('请求失败，请检查网络或 API Key');
+    aiConversation.push({ role: 'assistant', content: '请求失败，请检查网络连接。' });
+  }
+  renderAIChat();
+}
+
+// 一键分析按钮（复用对话形式）
+async function runAIAnalysis() {
+  if (aiConversation.length === 0) initAIChat();
+  else {
+    // 更新系统上下文
+    aiSystemContext = buildSystemContext();
+    aiConversation[0].content = '你是经营分析助手，请用简洁的中文回答。用户经营数据如下：\n\n' + aiSystemContext + '\n\n请基于以上数据回答用户问题，给出实用建议。';
+  }
+  aiConversation.push({ role: 'user', content: '请全面分析本月的经营数据，包括：1) 营收结构和各渠道表现 2) 成本控制情况 3) 与上月的环比变化 4) 具体的改进建议。用简洁的中文回答。' });
+  renderAIChat();
+
+  let apiKey = getApiKey();
+  if (!apiKey) {
+    apiKey = prompt('请输入 DeepSeek API Key：');
+    if (!apiKey) return;
+    localStorage.setItem('deepseek_api_key', apiKey);
+  }
+
+  document.getElementById('aiLoading').style.display = 'block';
+
+  try {
+    const res = await fetch(DEEPSEEK_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + apiKey
+      },
+      body: JSON.stringify({
+        model: getModel(),
+        messages: aiConversation,
+        temperature: 0.7,
+        max_tokens: 800
+      })
+    });
+
+    document.getElementById('aiLoading').style.display = 'none';
+
+    if (!res.ok) {
+      const err = await res.json();
+      aiConversation.push({ role: 'assistant', content: 'API 错误：' + (err.error?.message || res.status) });
+    } else {
+      const data = await res.json();
+      aiConversation.push({ role: 'assistant', content: data.choices[0].message.content });
+    }
+  } catch(e) {
+    document.getElementById('aiLoading').style.display = 'none';
+    aiConversation.push({ role: 'assistant', content: '请求失败，请检查网络连接。' });
+  }
+  renderAIChat();
+}
+
+function renderAIChat() {
+  const area = document.getElementById('aiChatArea');
+  if (!area) return;
+
+  let html = '';
+  // 跳过 system 消息，从第一条 user/assistant 开始显示
+  for (let i = 1; i < aiConversation.length; i++) {
+    const msg = aiConversation[i];
+    const role = msg.role === 'user' ? 'user' : 'assistant';
+    html += '<div class="ai-bubble ' + role + '">' +
+      '<div class="role-label">' + (role === 'user' ? '你' : 'AI') + '</div>' +
+      msg.content.replace(/\n/g,'<br>') +
+      '</div>';
+  }
+
+  if (html === '') {
+    html = '<div style="text-align:center;color:var(--secondary);padding:40px 20px;font-size:14px">'+
+      '👋 你好！我是你的经营分析助手<br><br>'+
+      '可以问我：</div>'+
+      '<div class="ai-bubble assistant" style="margin-left:0;margin-right:auto;background:#E9E9EF;width:fit-content;max-width:90%">'+
+      '💡 哪个渠道营收最高？<br>💡 这个月比上个月赚得多吗？<br>💡 怎么降低成本？<br>💡 利润增长有什么建议？'+
+      '</div>';
+    area.innerHTML = html;
+  } else {
+    area.innerHTML = html;
+    area.scrollTop = area.scrollHeight;
   }
 }
+
+function clearAIChat() {
+  aiConversation = [];
+  document.getElementById('aiChatArea').innerHTML = '';
+  renderAIChat();
+}
+
+// URL key 参数注入
+(function injectApiKey() {
+  const params = new URLSearchParams(window.location.search);
+  const key = params.get('key');
+  if (key) {
+    localStorage.setItem('deepseek_api_key', key);
+    window.location.replace(window.location.pathname);
+  }
+})();
 
 // ========== 初始化 ==========
 
