@@ -178,6 +178,12 @@ body{
   <button onclick="this.parentElement.style.display='none'" style="background:none;border:none;color:#fff;font-size:18px;margin-left:8px;cursor:pointer">&times;</button>
 </div>
 
+<!-- 更新提示 -->
+<div id="updatePrompt" style="display:none;background:#FF9500;color:#fff;text-align:center;padding:10px;font-size:14px">
+  🔄 发现新版本，<b onclick="location.href=location.href.split('?')[0]+'?t='+Date.now()" style="text-decoration:underline;cursor:pointer">点击更新</b>
+  <button onclick="this.parentElement.style.display='none'" style="background:none;border:none;color:#fff;font-size:18px;margin-left:8px;cursor:pointer">&times;</button>
+</div>
+
 <!-- Toast -->
 <div class="toast" id="toast"></div>
 
@@ -265,6 +271,7 @@ body{
     <span>历史</span>
   </button>
 </div>
+<div style="position:fixed;bottom:0;left:0;right:0;text-align:center;font-size:10px;color:var(--secondary);padding-bottom:calc(env(safe-area-inset-bottom,0) + 54px);pointer-events:none">version 7</div>
 
 <script>
 // ========== 数据管理 ==========
@@ -825,6 +832,17 @@ function showToast(msg) {
 }
 
 // ========== 初始化 ==========
+const APP_VERSION = 'v7';
+
+// 版本更新检测（必须在 setItem 之前检查）
+(function checkVersion() {
+  const stored = localStorage.getItem('app_version');
+  if (stored && stored !== APP_VERSION) {
+    document.getElementById('updatePrompt').style.display = 'block';
+  }
+})();
+localStorage.setItem('app_version', APP_VERSION);
+
 loadData();
 initMonthlyVars();
 initMonthPicker();
