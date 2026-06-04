@@ -251,6 +251,38 @@ body{
   <input type="file" id="importFile" accept=".json" style="display:none" onchange="importBackup(this)">
 </div>
 
+<!-- 页面 4: AI 分析 -->
+<div class="page" id="page-ai">
+  <div class="nav-header">AI 智能分析</div>
+
+  <div class="card">
+    <div class="card-header">API 设置</div>
+    <div class="card-row">
+      <span class="label" style="font-size:14px">DeepSeek API Key</span>
+    </div>
+    <div class="card-row">
+      <input type="password" id="apiKeyInput" placeholder="sk-..." style="width:100%;text-align:left;font-size:14px" onchange="saveApiKey()">
+    </div>
+  </div>
+
+  <div id="aiLoading" style="display:none;text-align:center;padding:20px;color:var(--blue)">
+    ⏳ AI 正在分析中...
+  </div>
+
+  <div id="aiResult" style="display:none;background:var(--card);border-radius:var(--radius);padding:16px;margin-bottom:16px;line-height:1.7;font-size:15px;white-space:pre-wrap"></div>
+
+  <button class="btn" onclick="runAIAnalysis()">🤖 分析本月经营数据</button>
+
+  <div style="text-align:center;color:var(--secondary);font-size:12px;padding:12px">
+    使用 DeepSeek API 分析<br>
+    <a href="https://platform.deepseek.com/api_keys" target="_blank" style="color:var(--blue)">获取 API Key</a>
+    &nbsp;|&nbsp;余额不足时换模型：<select id="modelSelect" onchange="saveModel()" style="font-size:12px;border:1px solid #ddd;border-radius:4px">
+      <option value="deepseek-chat">deepseek-chat (标准)</option>
+      <option value="deepseek-reasoner">deepseek-reasoner (深度)</option>
+    </select>
+  </div>
+</div>
+
 <!-- Tab Bar -->
 <div class="tab-bar">
   <button class="tab-btn active" onclick="switchPage('today')">
@@ -264,6 +296,10 @@ body{
   <button class="tab-btn" onclick="switchPage('history')">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
     <span>历史</span>
+  </button>
+  <button class="tab-btn" onclick="switchPage('ai')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a4 4 0 0 1 4 4v2a4 4 0 0 1-8 0V6a4 4 0 0 1 4-4z"/><path d="M8 14v-2a4 4 0 0 1 8 0v2"/><circle cx="12" cy="18" r="4"/><line x1="10" y1="18" x2="14" y2="18"/></svg>
+    <span>AI</span>
   </button>
 </div>
 
@@ -391,12 +427,13 @@ function switchPage(page) {
   document.getElementById('page-' + page).classList.add('active');
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
 
-  const tabs = {today: 0, monthly: 1, history: 2};
+  const tabs = {today: 0, monthly: 1, history: 2, ai: 3};
   document.querySelectorAll('.tab-btn')[tabs[page]].classList.add('active');
 
   if (page === 'today') renderToday();
   if (page === 'monthly') renderMonthly();
   if (page === 'history') renderHistory();
+  if (page === 'ai') renderAIPage();
 }
 
 // ========== 今日营收 ==========
@@ -823,6 +860,125 @@ function showToast(msg) {
   toast.textContent = msg;
   toast.classList.add('show');
   setTimeout(() => toast.classList.remove('show'), 1500);
+}
+
+// ========== AI 分析 (DeepSeek) ==========
+const DEEPSEEK_URL = 'https://api.deepseek.com/chat/completions';
+
+function getApiKey() {
+  return localStorage.getItem('deepseek_api_key') || '';
+}
+
+function saveApiKey() {
+  localStorage.setItem('deepseek_api_key', document.getElementById('apiKeyInput').value.trim());
+}
+
+function getModel() {
+  return localStorage.getItem('deepseek_model') || 'deepseek-chat';
+}
+
+function saveModel() {
+  localStorage.setItem('deepseek_model', document.getElementById('modelSelect').value);
+}
+
+function renderAIPage() {
+  document.getElementById('apiKeyInput').value = getApiKey();
+  document.getElementById('modelSelect').value = getModel();
+}
+
+async function runAIAnalysis() {
+  const apiKey = getApiKey();
+  if (!apiKey) {
+    showToast('请先填写 API Key');
+    return;
+  }
+
+  // 收集当前月份数据
+  const now = new Date();
+  const yr = now.getFullYear();
+  const mo = now.getMonth() + 1;
+  const monthRecords = getRecordsForMonth(yr, mo);
+  const exp = getExpense(yr, mo);
+
+  let totalMeituan=0, totalDouyin=0, totalAlipay=0, totalWechat=0, totalCash=0;
+  monthRecords.forEach(r => {
+    totalMeituan+=r.meituan||0; totalDouyin+=r.douyin||0;
+    totalAlipay+=r.alipay||0; totalWechat+=r.wechat||0; totalCash+=r.cash||0;
+  });
+  const totalRevenue = totalMeituan+totalDouyin+totalAlipay+totalWechat+totalCash;
+  const totalExp = exp.items.reduce((s,it)=>s+(it.amount||0),0);
+  const netProfit = totalRevenue - totalExp;
+
+  // 上月对比
+  let prevMo=mo-1, prevYr=yr;
+  if(prevMo===0){prevMo=12;prevYr--;}
+  const prevRecords = getRecordsForMonth(prevYr, prevMo);
+  const prevExpense = getExpense(prevYr, prevMo);
+  let prevRevenue = 0;
+  prevRecords.forEach(r=>{prevRevenue+=(r.meituan||0)+(r.douyin||0)+(r.alipay||0)+(r.wechat||0)+(r.cash||0);});
+  const prevExp = prevExpense.items.reduce((s,it)=>s+(it.amount||0),0);
+
+  // 构建提示词
+  const systemPrompt = '你是一个专业的餐饮/零售行业经营分析助手。请根据提供的经营数据，给出简洁实用的分析建议。用中文回答，不超过500字。';
+
+  let expenseDetail = exp.items.map(it=>'  - '+it.label+'：¥'+((it.amount||0)).toFixed(2)).join('\n');
+  const userPrompt = '请分析以下月度经营数据：\n\n'+
+    yr+'年'+mo+'月数据：\n'+
+    '营收：\n'+
+    '  - 美团：¥'+totalMeituan.toFixed(2)+'\n'+
+    '  - 抖音：¥'+totalDouyin.toFixed(2)+'\n'+
+    '  - 支付宝：¥'+totalAlipay.toFixed(2)+'\n'+
+    '  - 微信：¥'+totalWechat.toFixed(2)+'\n'+
+    '  - 现金：¥'+totalCash.toFixed(2)+'\n'+
+    '营收合计：¥'+totalRevenue.toFixed(2)+'\n'+
+    '支出：\n'+expenseDetail+'\n'+
+    '支出合计：¥'+totalExp.toFixed(2)+'\n'+
+    '纯利润：¥'+netProfit.toFixed(2)+'\n'+
+    '利润率：'+ (totalRevenue>0 ? (netProfit/totalRevenue*100).toFixed(1) : '0') +'%\n\n'+
+    '上月对比：\n'+
+    '  上月营收：¥'+prevRevenue.toFixed(2)+'\n'+
+    '  上月支出：¥'+prevExp.toFixed(2)+'\n'+
+    '  营收环比：'+ (prevRevenue>0 ? ((totalRevenue-prevRevenue)/prevRevenue*100).toFixed(1) : 'N/A') +'%\n\n'+
+    '请分析：1) 营收结构和渠道表现 2) 成本控制情况 3) 与上月对比的变化趋势 4) 具体改进建议';
+
+  document.getElementById('aiLoading').style.display = 'block';
+  document.getElementById('aiResult').style.display = 'none';
+
+  try {
+    const model = getModel();
+    const res = await fetch(DEEPSEEK_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + apiKey
+      },
+      body: JSON.stringify({
+        model: model,
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userPrompt }
+        ],
+        temperature: 0.7,
+        max_tokens: 800
+      })
+    });
+
+    document.getElementById('aiLoading').style.display = 'none';
+
+    if (!res.ok) {
+      const err = await res.json();
+      showToast('API 错误：' + (err.error?.message || res.status));
+      return;
+    }
+
+    const data = await res.json();
+    const reply = data.choices[0].message.content;
+    document.getElementById('aiResult').textContent = reply;
+    document.getElementById('aiResult').style.display = 'block';
+  } catch(e) {
+    document.getElementById('aiLoading').style.display = 'none';
+    showToast('请求失败，请检查网络或 API Key');
+  }
 }
 
 // ========== 初始化 ==========
