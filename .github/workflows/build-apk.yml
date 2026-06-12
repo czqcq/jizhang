@@ -1,0 +1,58 @@
+name: Build Android APK
+on: workflow_dispatch
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+      - uses: android-actions/setup-android@v3
+        with:
+          packages: 'platforms;android-34 build-tools;34.0.0'
+      - name: Generate keystore
+        run: |
+          keytool -genkey -v -keystore release.keystore -alias jizhang \
+            -keyalg RSA -keysize 2048 -validity 10000 \
+            -storepass android123 -keypass android123 \
+            -dname "CN=记账, OU=App, O=记账, L=Shanghai, ST=Shanghai, C=CN"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install bubblewrap
+        run: npm install -g @bubblewrap/cli
+      - name: Create and build TWA
+        run: |
+          mkdir twa && cd twa
+          cat > twa-manifest.json << 'EOM'
+          {
+            "packageId": "com.jizhang.app",
+            "host": "czqcq.github.io",
+            "name": "记账",
+            "launcherName": "记账",
+            "display": "standalone",
+            "themeColor": "#2563EB",
+            "navigationColor": "#FFFFFF",
+            "backgroundColor": "#F8FAFC",
+            "startUrl": "/jizhang/",
+            "iconUrl": "https://czqcq.github.io/jizhang/icon-512.png",
+            "maskableIconUrl": "https://czqcq.github.io/jizhang/icon-512.png",
+            "monochromeIconUrl": "https://czqcq.github.io/jizhang/icon-512.png",
+            "splashScreenFadeOutDuration": 300,
+            "signingKey": { "path": "../release.keystore", "alias": "jizhang" },
+            "appVersionName": "1.0",
+            "appVersionCode": 1,
+            "features": { "locationDelegation": { "enabled": false } }
+          }
+          EOM
+          bubblewrap update --manifest=twa-manifest.json
+          bubblewrap build
+        env:
+          STORE_PASS: android123
+          KEY_PASS: android123
+      - uses: actions/upload-artifact@v4
+        with:
+          name: jizhang-apk
+          path: twa/**/*.apk
+          retention-days: 30
